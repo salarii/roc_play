@@ -1,0 +1,6 @@
+nodes 50
+orange  0
+blue  0  
+
+
+
