@@ -28,64 +28,77 @@ getNumber = \ number ->
     when  number is 
         Ok (Frac val) -> val 
         _ -> 0 
-        
+
+
+removeFromHot \ hotSet, elem ->
+    Set.remove hotSet elem.tag
+
+checkIfPresent  \ list, hotSet  ->
+    List.walk settings, hotSet, removeFromHot
+    |> Set.len
+    |> Bool.isEq 0  
+
+
+
 appendCondExec = \ activities ->
-    if Set.len activities.hot == 0 then
-        { activities &  accepted : List.append activities.accepted activities.currSetting, currSetting : Set.empty {}, hot : Set.fromList [Young, Mass, Nodes, Damping, Orange, Blue ] } 
+    if checkIfPresent  activities.currSetting  (Set.fromList [Orange, Blue, Nodes ])  then
+        { activities &  accepted : List.append activities.accepted activities.currSetting, currSetting : Dict.empty {}, hot : Set.empty {} } 
     else
         activities
 
-appendIfNeeded = \ activities, curActiv ->
-    dbg  curActiv
-    if Bool.isEq  ( Dict.contains curActiv "type" ) Bool.true && 
-       Bool.isEq  ( Dict.contains curActiv "value" ) Bool.true then
-        activeType = Dict.get curActiv "type"
-        dbg  activeType
-        when  activeType is 
-            Ok (Frac val)  -> activities 
-            Ok jena -> 
-                secik = Set.fromList [Young, Mass, Nodes, Damping, Orange, Blue ]
-                dbg Set.remove (secik) jena
-                appendCondExec { activities &  hot : Set.remove activities.hot Nodes ,  currSetting :  Set.insert activities.currSetting   jena}
-            _ -> activities 
-    else
-        activities
-# (getNumber (Dict.get curActiv  "value" ))} 
+updateLast = \ listos, val ->
+    when List.last listos is 
+        Ok  elem ->  
+            updated = { elem & vals : List.append elem.vals  val }
+            List.dropLast  listos
+            |> List.append updated
+        Err _ -> listos
+
+appendIfNeeded = \ activities, token ->
+    when  token is
+        Frac val ->
+            { activities & currSetting : updateLast activities.currSetting val }
+        _ -> 
+            { activities & currSetting : List.append activities.currSetting { tag: token, vals : [] } }
 
 setupEnv = \ str  -> 
-    settings = { currSetting : (Set.empty {}),hot :Set.fromList [Young, Mass, Nodes, Damping, Orange, Blue ], accepted : [] }
+    settings = { currSetting : [], accepted : [] }
     prepareTokens (validate  (Str.replaceEach  str "\n" " " ) )  []
-    |> ( \ tokens -> createActivities settings tokens  (Dict.empty {}))
+    |> ( \ tokens -> createActivities settings tokens  )
 
 
-readNextToken = \ token, curActiv ->
-    empty = Dict.empty {}
+readNextToken = \ token ->
     when  token is 
         "young" ->
-            Dict.insert empty "type"  Young
+            Young
         "mass" ->
-            Dict.insert empty "type"  Mass
+            Mass
         "nodes" ->
-            Dict.insert empty "type"  Nodes
+            Nodes
         "damping" ->
-            Dict.insert empty "type"  Damping
+            Damping
         "orange" ->
-            Dict.insert empty "type"  Orange
+            Orange
         "blue" ->
-            Dict.insert empty "type"  Blue
+            Blue
         _ ->
+            dbg  token
             when  Str.toF32  token is 
                 Ok val ->  
-                    Dict.insert curActiv "value"  (Frac val)
-                Err  _ -> curActiv
+                    (Frac val)
+                Err  _ -> None
 
-createActivities = \ activities, tokens, curActiv ->
+createActivities = \ activities, tokens ->
     nextToken = List.first tokens
+    dbg activities
     when nextToken is
         Ok token ->
-            modified = readNextToken token curActiv
-            createActivities (appendIfNeeded activities  modified) (List.dropFirst  tokens) modified
+            dbg  nextToken
+            modified = readNextToken token
+            createActivities  (appendIfNeeded activities  modified)  (List.dropFirst  tokens) 
+            #createActivities  (List.dropFirst  tokens) modified
         Err _ ->
+            dbg  activities
             activities 
             
          
