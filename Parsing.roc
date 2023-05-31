@@ -1,5 +1,5 @@
 interface Parsing
-    exposes [setupEnv]
+    exposes [setupEnv, checkIfPresent, getTagFromConfig]
     imports [pf.Stdout]
 
 validate = \ result ->
@@ -30,20 +30,48 @@ getNumber = \ number ->
         _ -> 0 
 
 
-removeFromHot \ hotSet, elem ->
-    Set.remove hotSet elem.tag
+removeFromHot = \ hotSet, elem ->
+    when  elem.tag is
+        Young -> Set.remove hotSet Young
+        Mass -> Set.remove hotSet Mass
+        Nodes -> Set.remove hotSet Nodes
+        Damping -> Set.remove hotSet Damping
+        Orange -> Set.remove hotSet Orange
+        Gold -> Set.remove hotSet Gold
+        Blue -> Set.remove hotSet Blue
+        _ -> hotSet
 
-checkIfPresent  \ list, hotSet  ->
-    List.walk settings, hotSet, removeFromHot
+checkIfPresent = \ list, hotSet  ->
+    List.walk list hotSet removeFromHot
     |> Set.len
     |> Bool.isEq 0  
 
+cleanTag = \ tag ->
+    when tag  is 
+        Value _ -> Value
+        Young -> Young
+        Mass -> Mass
+        Nodes -> Nodes
+        Damping -> Damping
+        Orange -> Orange
+        Gold -> Gold
+        Blue -> Blue
+        _ -> None
 
+
+getTagFromConfig = \ tag , config  -> 
+    cleanedTag = cleanTag  tag
+    when List.findFirst config ( \ elem -> (cleanTag elem.tag) == cleanedTag) is 
+        Ok val ->  val 
+        Err _ -> { tag: tag, vals : [] }
 
 appendCondExec = \ activities ->
-    if checkIfPresent  activities.currSetting  (Set.fromList [Orange, Blue, Nodes ])  then
-        { activities &  accepted : List.append activities.accepted activities.currSetting, currSetting : Dict.empty {}, hot : Set.empty {} } 
+    if checkIfPresent  activities.currSetting  (Set.fromList [Orange, Blue, Nodes ]) == Bool.true ||
+       checkIfPresent  activities.currSetting  (Set.fromList [Gold, Nodes ]) == Bool.true then
+        
+        { activities &  accepted : List.append activities.accepted activities.currSetting, currSetting : [] } 
     else
+        
         activities
 
 updateLast = \ listos, val ->
@@ -56,10 +84,11 @@ updateLast = \ listos, val ->
 
 appendIfNeeded = \ activities, token ->
     when  token is
-        Frac val ->
+        Value val ->
             { activities & currSetting : updateLast activities.currSetting val }
         _ -> 
-            { activities & currSetting : List.append activities.currSetting { tag: token, vals : [] } }
+            updated = appendCondExec  activities
+            { updated & currSetting : List.append updated.currSetting { tag: token, vals : [] } }
 
 setupEnv = \ str  -> 
     settings = { currSetting : [], accepted : [] }
@@ -77,29 +106,27 @@ readNextToken = \ token ->
             Nodes
         "damping" ->
             Damping
+        "gold" ->
+            Gold
         "orange" ->
             Orange
         "blue" ->
             Blue
         _ ->
-            dbg  token
             when  Str.toF32  token is 
                 Ok val ->  
-                    (Frac val)
+                    (Value  val)
                 Err  _ -> None
 
 createActivities = \ activities, tokens ->
     nextToken = List.first tokens
-    dbg activities
     when nextToken is
         Ok token ->
-            dbg  nextToken
             modified = readNextToken token
             createActivities  (appendIfNeeded activities  modified)  (List.dropFirst  tokens) 
-            #createActivities  (List.dropFirst  tokens) modified
         Err _ ->
             dbg  activities
-            activities 
+            appendIfNeeded activities PushLastToken
             
          
 
