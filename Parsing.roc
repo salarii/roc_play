@@ -24,10 +24,6 @@ prepareTokens = \ str, tokens ->
 createElement = \ nodes, young, mass, damping -> 
     {nodes : nodes, young : young, mass : mass, damping : damping}
     
-getNumber = \ number ->
-    when  number is 
-        Ok (Frac val) -> val 
-        _ -> 0 
 
 
 removeFromHot = \ hotSet, elem ->
