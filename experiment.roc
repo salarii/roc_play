@@ -65,16 +65,6 @@ shift = \ list,  direction, fill, cnt ->
         else 
             list
     
-    
-essenceDerivOp = \ listPlus, listMid, listMinus, delta -> 
-    List.map3 listPlus listMid listMinus (\ plus , mid, minus -> (plus - 2*mid + minus )/(power2 delta))
-    
-secondDeriv = \ list, delta, edges ->
-    timePlus1 = shift list Left edges.right 1
-    timeMinus1 = shift list Right edges.left 1
-    essenceDerivOp timePlus1 list timeMinus1 delta
-
-
 makeSquare = \ x, y, val ->
     makeSquareRec x y val []
     
@@ -94,8 +84,8 @@ makeCubeRec = \ x, y, z, val ,list  ->
         makeCubeRec  x y  (z - 1) val (List.append list (makeSquare x y val ) )
 
 
-makeStringCube = \ cube -> 
-    List.walk cube  ""  ( \ str, sq  ->  Str.concat str (Str.concat ( makeStringSq sq ) "\n\n" ) )
+makeStringCube = \ cube, separate-> 
+    List.walk cube  ""  ( \ str, sq  ->  Str.concat str (Str.concat ( makeStringSq sq ) separate ) )
      
 makeStringSq =  \ square -> 
     List.walk square  "" (\ str, list -> List.walk list (Str.concat  str "\n") (\strIn, val -> Str.concat (Str.concat strIn  " ") ( Num.toStr val ) ) )
@@ -111,44 +101,113 @@ modifyFieldCube  = \ cube, x, y, z, val ->
     |> List.replace x val 
     |> (\ updated -> (List.replace cube z ( List.replace (getListFromList cube z) y updated.list  ).list   ).list  )
 
-secondDerivUpDown = \ lists,  delta, edges  -> 
-    len = List.len (getListFromList  lists 0) 
-    listScrollUp = List.dropLast ( List.prepend  lists (List.repeat edges.up len) )
-    listScrollDown = List.dropFirst (List.append  lists (List.repeat edges.up len) )
+essenceDerivOp = \ listPlus, listMid, listMinus, delta -> 
+    List.map3 listPlus listMid listMinus (\ plus , mid, minus -> (plus - 2*mid + minus )/(power2 delta))
+    
+opDerivXlist = \ list, delta, edges, op ->
+    timePlus = shift list Left edges.plus 1
+    timeMinus = shift list Right edges.minus 1
+    op timePlus list timeMinus delta
 
-    List.map3 listScrollUp lists listScrollDown  ( \   upList, midList, downList ->
-                                                              dbg  upList
-                                                              dbg  midList
-                                                              dbg  downList
-                                                              essenceDerivOp upList midList downList delta)
+opDerivXCube = \ cube, delta, edges, op ->
+    List.walk cube [] (
+         \ out ,sq -> 
+            out
+            |> List.append (List.walk sq [] (
+                \ outList, list ->
+                    outList
+                    |> List.append  (opDerivXlist list delta edges op) )))
+                    
+opDerivYSq = \ lists,  delta, edges, op  -> 
+    len = List.len (getListFromList  lists 0) 
+    listYPlus = 
+        lists 
+        |> List.prepend (List.repeat edges.plus len)
+        |> List.dropLast
+    listYMinus = 
+        lists
+        |> List.append (List.repeat edges.minus len)
+        |> List.dropFirst 
+
+    List.map3 listYPlus lists listYMinus  ( \   listPlus, list, listMinus ->
+                                                              op listPlus list listMinus delta)
+    
+opDerivYCube = \ cube, delta, edges, op ->
+    List.walk cube [] ( \ out ,sq -> List.append  out  (opDerivYSq sq delta edges op) )
+
+opDerivZCube  = \ cube, delta, edges, op  ->
+    lenY = 
+        getListFromList  cube 0
+        |> List.len
+          
+    lenX = 
+        getListFromList cube 0
+        |> getListFromList 0
+        |> List.len
+          
+    listZPlus = 
+        cube
+        |> List.prepend (makeSquare lenX lenY edges.plus  )
+        |> List.dropLast 
+    listZMinus =
+        cube
+        |> List.append (makeSquare lenX lenY edges.minus )
+        |> List.dropFirst 
+         
+    List.map3 listZPlus cube listZMinus ( 
+        \ sqPlus, sq, sqMinus -> List.map3 sqPlus sq sqMinus(
+                \ listPlus, list, listMinus ->
+                        op listPlus list listMinus delta) )
+
+poissonDerivOp = \ listPlus, listMid, listMinus, delta -> 
+    List.map3 listPlus listMid listMinus (\ plus , mid, minus -> (plus  + minus )/(power2 delta))
     
 
-secondDerivZ  = \ cube, delta, edges  ->
-    lenY = List.len  (getListFromList  cube 0)
-    lenX = List.len  (getListFromList (getListFromList cube 0) 0)
-    listZPlus = List.dropLast ( List.prepend  cube (makeSquare lenX lenY edges.plus  ) )
-    listZMinus = List.dropFirst ( List.append  cube (makeSquare lenX lenY edges.minus ) )
-    List.map3 listZPlus cube listZMinus  ( \   sqPlus, sq, sqMinus ->
-        List.map3 sqPlus sq sqMinus( \   listPlus, list, listMinus ->
-                                                              essenceDerivOp listPlus list listMinus delta))
+opCubes = \ leftCube, rightCube, op ->
+    List.map2 leftCube rightCube (
+        \ leftSq, rightSq -> List.map2  leftSq rightSq (
+            \ leftList, rightList -> List.map2 leftList rightList op ) )
 
-solution = \ list, prevList, deltaTime, deltaSpace -> 
-    dubDeriv = List.map (secondDeriv list  deltaSpace  {right : 0 , left: 0}) (\val  -> val * (power2  deltaTime )  ) 
+opCube = \ cube, val, op ->
+    List.map cube (
+        \ sq -> List.map  sq (
+            \ list -> List.map list ( \ listVal ->  op listVal val ) ) )
+
+
+addOp = \ left, right ->
+     left + right
+
+minusOp = \ left, right ->
+     left - right
+
+divideOp = \ left, right ->
+     left / right
+
+solution = \ cube, cubeCharge, delta, edges -> 
+    opDerivXCube cube  1 {plus : 0, minus : 0}  poissonDerivOp
+    |> opCubes (opDerivYCube cube  1 {plus : 0, minus : 0}  poissonDerivOp) addOp
+    |> opCubes (opDerivZCube cube  1 {plus : 0, minus : 0}  poissonDerivOp ) addOp
+    |> opCubes cubeCharge minusOp
+    |> opCube ( 6 * (power2 delta)) divideOp
+    
+#    dubDeriv = List.map (secondDeriv list  deltaSpace  {right : 0 , left: 0}) (\val  -> val * (power2  deltaTime )  ) 
     #dbg dubDeriv
-    List.map3  dubDeriv  list  prevList  ( \ deriv, val, prevVal  -> deriv + 2.0 * val - prevVal  ) 
+#    List.map3  dubDeriv  list  prevList  ( \ deriv, val, prevVal  -> deriv + 2.0 * val - prevVal  ) 
+    
+
+    
     
 points  = 10  
 iter  = 100 
 cosMod = 3.14 / ( Num.toF32 points)
 deltaConcreteTime = 0.1
 
-calculateSolution  =  \ list, listPrev, cnt ->
+calculateSolution  =  \ cube, cubeCharge, delta, edges, cnt ->
     if cnt ==  0 then
-        list
+        cube
     else
-        next = solution  list listPrev   deltaConcreteTime   cosMod 
-        dbg (List.walk   list "" (\str, val -> Str.concat (Str.concat str  " ") ( Num.toStr val ) ) )
-        calculateSolution  next list  ( cnt  - 1 )
+        solution  cube cubeCharge delta edges 
+        |> calculateSolution cubeCharge delta edges ( cnt  - 1 )
    
 
    
@@ -162,14 +221,25 @@ sliceCube = \ cube, slices ->
         { x : All, y : Idx yVal, z : Idx zVal  }  -> [(getListFromList (getListFromList cube zVal) yVal)]     
         { x : Idx xVal, y : Idx yVal, z : Idx zVal  }  -> [[ getFromList (getListFromList (getListFromList cube zVal) yVal) xVal  ]]
         _ ->  []
+
+test  = \ clad,  mad ->
+    mad clad
 main =
     
-    cube  = makeCube 3 3 3 1 
-    modCub = modifyFieldCube cube  0 1  1  0
+    modCub  =
+        makeCube 3 3 3 0 
+        |> modifyFieldCube  1 1  1  -101
+        |> modifyFieldCube  1 2  2  10
     #sq = makeSquare 3  3  5
     #slice = sliceCube  modCub  {x: All, y :Idx 1, z: All}
-
-    Stdout.line  ( makeStringCube modCub)
+    sol  = (calculateSolution  (makeCube 3 3 3 0 ) modCub  1 {plus : 0, minus : 0 } 100 )
+    solutionD =
+        
+        opDerivXCube sol 1 {plus : 0, minus : 0}  essenceDerivOp
+        |> opCubes (opDerivYCube sol  1 {plus : 0, minus : 0}  essenceDerivOp) addOp
+        |> opCubes (opDerivZCube sol  1 {plus : 0, minus : 0}  essenceDerivOp ) addOp
+    
+    Stdout.line  ( makeStringCube  solutionD "\n\n" )
     #Stdout.line  ( makeStringSq slice)
     
     
