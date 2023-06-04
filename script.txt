@@ -1,4 +1,4 @@
-nodes 50
+nodes 10
 orange  1
 blue  1 
 

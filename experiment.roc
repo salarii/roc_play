@@ -75,19 +75,41 @@ secondDeriv = \ list, delta, edges ->
     essenceDerivOp timePlus1 list timeMinus1 delta
 
 
-makeSquare = \ rows, cols, list  ->
-    if rows == 0 then
+makeSquare = \ x, y, val ->
+    makeSquareRec x y val []
+    
+makeSquareRec = \ x, y, val, list  ->
+    if y == 0 then
         list
     else
-        makeSquare (rows - 1) cols  (List.append  list (List.repeat  0  cols ))
+        makeSquareRec x (y - 1) val (List.append  list (List.repeat  val  x ))
 
-makeString =  \ square -> 
+makeCube = \ x, y, z, val  ->
+    makeCubeRec x y z val []
+
+makeCubeRec = \ x, y, z, val ,list  ->
+    if z == 0 then
+        list
+    else
+        makeCubeRec  x y  (z - 1) val (List.append list (makeSquare x y val ) )
+
+
+makeStringCube = \ cube -> 
+    List.walk cube  ""  ( \ str, sq  ->  Str.concat str (Str.concat ( makeStringSq sq ) "\n\n" ) )
+     
+makeStringSq =  \ square -> 
     List.walk square  "" (\ str, list -> List.walk list (Str.concat  str "\n") (\strIn, val -> Str.concat (Str.concat strIn  " ") ( Num.toStr val ) ) )
 
-modifyField  = \ square, row, col, val ->
-    getListFromList square row
-    |> List.replace col val 
-    |> (\ updated -> (List.replace square row updated.list).list  )
+modifyFieldSq  = \ square, x, y, val ->
+    getListFromList square y
+    |> List.replace x val 
+    |> (\ updated -> (List.replace square y updated.list).list  )
+
+modifyFieldCube  = \ cube, x, y, z, val ->
+    getListFromList cube z
+    |> getListFromList y
+    |> List.replace x val 
+    |> (\ updated -> (List.replace cube z ( List.replace (getListFromList cube z) y updated.list  ).list   ).list  )
 
 secondDerivUpDown = \ lists,  delta, edges  -> 
     len = List.len (getListFromList  lists 0) 
@@ -101,7 +123,16 @@ secondDerivUpDown = \ lists,  delta, edges  ->
                                                               essenceDerivOp upList midList downList delta)
     
 
-solution = \ list, prevList, deltaTime, deltaSpace    -> 
+secondDerivZ  = \ cube, delta, edges  ->
+    lenY = List.len  (getListFromList  cube 0)
+    lenX = List.len  (getListFromList (getListFromList cube 0) 0)
+    listZPlus = List.dropLast ( List.prepend  cube (makeSquare lenX lenY edges.plus  ) )
+    listZMinus = List.dropFirst ( List.append  cube (makeSquare lenX lenY edges.minus ) )
+    List.map3 listZPlus cube listZMinus  ( \   sqPlus, sq, sqMinus ->
+        List.map3 sqPlus sq sqMinus( \   listPlus, list, listMinus ->
+                                                              essenceDerivOp listPlus list listMinus delta))
+
+solution = \ list, prevList, deltaTime, deltaSpace -> 
     dubDeriv = List.map (secondDeriv list  deltaSpace  {right : 0 , left: 0}) (\val  -> val * (power2  deltaTime )  ) 
     #dbg dubDeriv
     List.map3  dubDeriv  list  prevList  ( \ deriv, val, prevVal  -> deriv + 2.0 * val - prevVal  ) 
@@ -119,20 +150,30 @@ calculateSolution  =  \ list, listPrev, cnt ->
         dbg (List.walk   list "" (\str, val -> Str.concat (Str.concat str  " ") ( Num.toStr val ) ) )
         calculateSolution  next list  ( cnt  - 1 )
    
+
+   
+sliceCube = \ cube, slices ->
+    when slices  is 
+        { x : Idx xVal, y : All, z : All }  -> List.walk cube  [] ( \out ,sq  -> List.append out ( List.walk sq [] ( \ outList, list-> List.append  outList (getFromList list xVal)  ) ) )   
+        { x : All, y : Idx yVal, z : All }  -> List.walk cube [] ( \out ,sq -> List.append out ( getListFromList sq  yVal ) )    
+        { x : All, y : All, z : Idx zVal }  -> (getListFromList cube zVal)    
+        { x : Idx xVal, y : Idx yVal, z : All }  -> [List.walk cube  [] ( \out, sq -> List.append out (getFromList (getListFromList sq yVal) xVal  ) ) ] 
+        { x : Idx xVal, y : All, z : Idx zVal  }  -> [List.walk (getListFromList cube zVal) [] ( \list, out -> List.append out ( getFromList list  xVal ) )]    
+        { x : All, y : Idx yVal, z : Idx zVal  }  -> [(getListFromList (getListFromList cube zVal) yVal)]     
+        { x : Idx xVal, y : Idx yVal, z : Idx zVal  }  -> [[ getFromList (getListFromList (getListFromList cube zVal) yVal) xVal  ]]
+        _ ->  []
 main =
     
-    #list  =  List.map  ( modList  (centerList points) cosMod ) ( \ val -> Num.cos(  val ) ) 
-    squar =  makeSquare  5  10  [] 
-    deriv  =  secondDerivUpDown  ( modifyField  squar  2  2  1 )  1  { up: 0 , down: 0 }
-    dbg  secondDeriv  [ 0, 0,  1, 0, 0]  1  {  right : 0 , left : 0}
-    #dbg  calculateSolution list  list  iter 
-    
-    #dbg     dbg shift [1, 2, 3, 4] Right 0  2
-     #eton =  Parsing.setupEnv  "nodes 2 20 \n gold  0  \n "
-    #dbg  eton 
-    #dbg createWorld (eton.accepted )
+    cube  = makeCube 3 3 3 1 
+    modCub = modifyFieldCube cube  0 1  1  0
+    #sq = makeSquare 3  3  5
+    #slice = sliceCube  modCub  {x: All, y :Idx 1, z: All}
 
-    Stdout.line  ( makeString deriv)
+    Stdout.line  ( makeStringCube modCub)
+    #Stdout.line  ( makeStringSq slice)
+    
+    
+
     
     
     
