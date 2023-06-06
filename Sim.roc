@@ -10,7 +10,7 @@ increasedList = \ cnt, list ->
         else
             increasedList (cnt - 1) (List.prepend  list (cnt - 1)) 
          
-shiftList  = \ center, list ->
+shiftList  = \ list, center  ->
         List.map list (\ elem ->  elem + center )
 
 
@@ -179,16 +179,19 @@ calculateSolution  =  \ cube, cubeCharge, delta, edges, cnt ->
 
 circle = \ x, y, z, r ->
     size = 2*r +1
-    list = increasedList size []
-    listX = shiftList -r  list
-    listY = shiftList -r  list
-    listZ = shiftList -r  list
-    List.walk listX  [] ( 
-        \ stateX, idx -> List.walk listY stateX (
-            \ stateY, idy -> List.walk listY stateY  (
+    list = 
+        increasedList size []
+        |> shiftList -r  
+    List.walk list  [] ( 
+        \ stateX, idx -> List.walk list stateX (
+            \ stateY, idy -> List.walk list stateY  (
                 \ stateZ, idz ->
+                    #dbg idx
+                    #dbg idy
+                    #dbg idz
+                    #dbg  stateZ
                     if ( Num.powInt idx 2 ) + ( Num.powInt idy 2 ) + ( Num.powInt idz 2 )  <= ( Num.powInt r 2 ) then  
-                        List.append  stateZ  {x : idx + x ,y: idy + y,z : idz + z}
+                        List.append  stateZ  {x : Num.toNat(idx + x) ,y: Num.toNat(idy + y),z : Num.toNat(idz + z)}
                     else 
                         stateZ ))) 
    
