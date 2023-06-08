@@ -26,30 +26,20 @@ test  = \ clad,  mad ->
     mad clad
 main =
     
-    x = 30
-    y = 36
-    z = 30
+    x = 10
+    y = 10
+    z = 10
     delta  = 2
     modCub  =
             Sim.makeCube x y z 0 
             |> Sim.modifyFieldCube  1 1 1 3
-    #sol  = (Sim.calculateSolution  (Sim.makeCube x y z 0  ) modCub  delta {plus : 0, minus : 0 } 10 )
+    str  = Sim.makeStringCube modCub { z : "\nz\n",y : "\ny\n" }
     
-    sl  = Sim.circle  20  20  20   7
-    
- 
-    #dbg   sl 
-    slice =   
-        Sim.makeCube x y z 0
-        |> Sim.setShape sl  1
-        |> Sim.sliceCube {x:Idx 20, y : All, z: All}
-    #    |> Sim.modifyFieldCube  1 2  2  10
-    #sq = makeSquare 3  3  5
-    #
-    #sol  = (Sim.calculateSolution  (Sim.makeCube 8 8 8 0  ) modCub  1 {plus : 0, minus : 0 } 100 )
+    cube  = Parsing.readCube  str
 
-    #Stdout.line  ( Sim.makeStringCube slice "\n\n" )  
-    Stdout.line  ( Sim.makeStringSq slice)
+    #dbg  cube
+    Stdout.line  ( str )
+    #Stdout.line  (Sim.makeStringCube cube { z : "\n\n",y : "\n" } )
     #Stdout.line  "dadsa"
     
 
