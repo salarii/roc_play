@@ -26,19 +26,11 @@ test  = \ clad,  mad ->
     mad clad
 main =
     
-    x = 10
-    y = 10
-    z = 10
-    delta  = 2
-    modCub  =
-            Sim.makeCube x y z 0 
-            |> Sim.modifyFieldCube  1 1 1 3
-    str  = Sim.makeStringCube modCub { z : "\nz\n",y : "\ny\n" }
+    orange = List.repeat 0 200
+    blue = (List.replace   (List.repeat 0 201)  50  0).list
     
-    cube  = Parsing.readCube  str
-
-    #dbg  cube
-    Stdout.line  ( str )
+    orangeCalc = Sim.lineMotion orange  blue  40 []
+    Stdout.line ( Sim.makeStringSq orangeCalc  "\n" )
     #Stdout.line  (Sim.makeStringCube cube { z : "\n\n",y : "\n" } )
     #Stdout.line  "dadsa"
     

@@ -33,15 +33,12 @@ main =
 
         #contents <- File.readUtf8 pathScript |> Task.await
         #notify = Squares.runWorld  1000 { blues: [{blue : 0.0},{blue : 1.0},{blue : 0.0}], oranges : [{orange : 0}, {orange : 0} ] }  ""
-        x = 300
-        y = 300
-        z = 300
-        modCub  =
-            Sim.makeCube x y z 0 
-            |> Sim.modifyFieldCube  20 20  20  3
-        sol  = (Sim.calculateSolution  (Sim.makeCube x y z 0  ) modCub  0.1 {plus : 0, minus : 0 } 100 )
-
-        log = Sim.makeStringSq (Sim.sliceCube sol {x: All, y :Idx 20, z: All}) 
+        orange = List.repeat 0 200
+        blue = List.repeat 0 201
+        
+        orangeCalc = Sim.lineMotion orange  blue  32000  []
+        
+        log = Sim.makeStringSq orangeCalc "\n"
 
         _ <- File.writeUtf8 path log |> Task.await
         Stdout.line "done"

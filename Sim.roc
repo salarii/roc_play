@@ -1,6 +1,6 @@
 interface Sim
     exposes [modifyFieldCube, calculateSolution, makeCube, makeStringCube
-            ,makeStringSq, sliceCube, check, sphere, setShape ]
+            ,makeStringSq, sliceCube, check, sphere, setShape, lineMotion ]
     imports [Util]
 
 
@@ -77,6 +77,13 @@ modifyFieldCube  = \ cube, x, y, z, val ->
 essenceDerivOp = \ listPlus, listMid, listMinus, delta -> 
     List.map3 listPlus listMid listMinus (\ plus , mid, minus -> (plus - 2*mid + minus )/(power2 delta))
     
+poissonDerivOp = \ listPlus, listMid, listMinus, delta -> 
+
+    List.map3 listPlus listMid listMinus (\ plus , mid, minus -> (plus  + minus )/(power2 delta))
+    
+deriv1Op = \ listPlus, listMid, listMinus, delta ->   
+    List.map3 listPlus listMid listMinus (\ plus , mid, minus -> (mid - minus )/delta)
+
 opDerivXlist = \ list, delta, edges, op ->
     timePlus = shift list Left edges.plus 1
     timeMinus = shift list Right edges.minus 1
@@ -132,10 +139,7 @@ opDerivZCube  = \ cube, delta, edges, op  ->
                 \ listPlus, list, listMinus ->
                         op listPlus list listMinus delta) )
 
-poissonDerivOp = \ listPlus, listMid, listMinus, delta -> 
 
-    List.map3 listPlus listMid listMinus (\ plus , mid, minus -> (plus  + minus )/(power2 delta))
-    
 
 opCubes = \ leftCube, rightCube, op ->
     List.map2 leftCube rightCube (
@@ -148,7 +152,7 @@ opCube = \ cube, val, op ->
             \ list -> List.map list ( \ listVal ->  op listVal val ) ) )
 
 
-addOp = \ left, right ->
+plusOp = \ left, right ->
      left + right
 
 minusOp = \ left, right ->
@@ -159,16 +163,16 @@ mulOp = \ left, right ->
 
 solution = \ cube, cubeCharge, delta, edges -> 
     opDerivXCube cube  delta {plus : 0, minus : 0}  poissonDerivOp
-    |> opCubes (opDerivYCube cube  delta {plus : 0, minus : 0}  poissonDerivOp) addOp
-    |> opCubes (opDerivZCube cube  delta {plus : 0, minus : 0}  poissonDerivOp ) addOp
+    |> opCubes (opDerivYCube cube  delta {plus : 0, minus : 0}  poissonDerivOp) plusOp
+    |> opCubes (opDerivZCube cube  delta {plus : 0, minus : 0}  poissonDerivOp ) plusOp
     |> opCubes cubeCharge minusOp
     |> opCube (  (power2 delta) / 6 ) mulOp
     
 
 check = \ cube, delta, edges -> 
     opDerivXCube cube delta {plus : 0, minus : 0}  essenceDerivOp
-    |> opCubes (opDerivYCube cube  delta {plus : 0, minus : 0}  essenceDerivOp) addOp
-    |> opCubes (opDerivZCube cube  delta {plus : 0, minus : 0}  essenceDerivOp ) addOp
+    |> opCubes (opDerivYCube cube  delta {plus : 0, minus : 0}  essenceDerivOp) plusOp
+    |> opCubes (opDerivZCube cube  delta {plus : 0, minus : 0}  essenceDerivOp ) plusOp
 
     
 
@@ -253,3 +257,36 @@ sliceCube = \ cube, slices ->
         _ ->  []
 
 
+addBackAndFront = \ list, front , back  ->
+    list
+    |> List.prepend front
+    |> List.append back
+
+lineMotion = \ orange, blueIn, cnt, out ->
+    condPar = 0.0
+    deltaX = 1
+    deltaT = 0.01
+    edges = {plus : 0, minus : 0}
+    
+    blue = (List.replace  blueIn   50   (Num.sin ((3.14/(20.0/deltaT) ) * ( Num.toF32  cnt ))) ).list
+     
+    
+    if cnt == 0 then 
+        out
+    else
+        orangePlusDeltaT =
+            (opDerivXlist blue deltaX edges deriv1Op )
+            |> List.dropFirst
+            |> modList deltaT
+            |> List.map2 orange plusOp
+
+        modOrange = addBackAndFront orange 0  0
+        bluePlusDeltaT =
+            (opDerivXlist modOrange deltaX edges deriv1Op )
+            |> List.dropFirst
+            |> modList deltaT
+            |> List.map2 blue plusOp
+        dbg  (List.len orangePlusDeltaT)
+        dbg  (List.len orange)
+        lineMotion  orangePlusDeltaT bluePlusDeltaT (cnt - 1) (  List.append  out blue)
+      
