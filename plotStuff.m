@@ -1,6 +1,6 @@
 out = load( "out.txt" );
 
-b =  80;
+b =  4;
 out = out(b:b:end,:);
 
 t = 1:1: size( out, 2);

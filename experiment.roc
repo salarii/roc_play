@@ -19,6 +19,10 @@ serviceConfig = \ created, config ->
         created
 
 
+force = \ list, deltaT, cnt ->
+    (List.replace  list  10  1).list
+
+
 createWorld = \ configList -> 
     List.walk  configList  []  serviceConfig
 
@@ -26,10 +30,10 @@ test  = \ clad,  mad ->
     mad clad
 main =
     
-    orange = List.repeat 0 200
-    blue = (List.replace   (List.repeat 0 201)  50  0).list
+    orange = List.repeat 0 20
+    blue = (List.replace   (List.repeat 0 21)  0  0).list
     
-    orangeCalc = Sim.lineMotion orange  blue  40 []
+    orangeCalc = Sim.lineMotion orange  blue force {front : 0, back : 0 } 40 []
     Stdout.line ( Sim.makeStringSq orangeCalc  "\n" )
     #Stdout.line  (Sim.makeStringCube cube { z : "\n\n",y : "\n" } )
     #Stdout.line  "dadsa"

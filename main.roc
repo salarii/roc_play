@@ -23,6 +23,9 @@ runWorld  = \ iter, worldIn ->
     else
         runWorld (iter - 1 )  (Squares.calcWorldFlow  worldIn)  
         
+force = \ list, deltaT, cnt ->
+    (List.replace  list   50   (Num.sin ((3.14/(20.0/deltaT) ) * ( Num.toF32  cnt ))) ).list
+
 
 main =
 
@@ -36,7 +39,7 @@ main =
         orange = List.repeat 0 200
         blue = List.repeat 0 201
         
-        orangeCalc = Sim.lineMotion orange  blue  32000  []
+        orangeCalc = Sim.lineMotion orange  blue force {front : 0, back : 0 } 12000 []
         
         log = Sim.makeStringSq orangeCalc "\n"
 

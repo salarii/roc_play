@@ -256,20 +256,28 @@ sliceCube = \ cube, slices ->
         { x : Idx xVal, y : Idx yVal, z : Idx zVal  }  -> [[ Util.getFromList (Util.getListFromList (Util.getListFromList cube zVal) yVal) xVal  ]]
         _ ->  []
 
-
-addBackAndFront = \ list, front , back  ->
+addFrontAndBack = \ list, front , back  ->
     list
     |> List.prepend front
     |> List.append back
 
-lineMotion = \ orange, blueIn, cnt, out ->
+returnElem = \ list, index, defElem ->
+    when List.get  list  index  is 
+        Ok  elem -> elem
+        Err OutOfBounds -> defElem
+
+getFrontBack  = \  list  ->
+    defElem = 0
+    lastIdx = List.len list - 1
+    { front : returnElem list 0 defElem, back : returnElem list lastIdx defElem }
+    
+lineMotion = \ orange, blueIn, force, prevEnds, cnt, out ->
     condPar = 0.0
     deltaX = 1
-    deltaT = 0.01
+    deltaT = 0.5
     edges = {plus : 0, minus : 0}
-    
-    blue = (List.replace  blueIn   50   (Num.sin ((3.14/(20.0/deltaT) ) * ( Num.toF32  cnt ))) ).list
-     
+    c = 1
+    blue = force  blueIn deltaT  cnt    
     
     if cnt == 0 then 
         out
@@ -280,13 +288,16 @@ lineMotion = \ orange, blueIn, cnt, out ->
             |> modList deltaT
             |> List.map2 orange plusOp
 
-        modOrange = addBackAndFront orange 0  0
+
+        frontBack = getFrontBack orangePlusDeltaT 
+        travelTime = deltaX / c
+        modOrange = addFrontAndBack orangePlusDeltaT (frontBack.front - ( frontBack.front - prevEnds.front) *(travelTime/deltaT) )  ( frontBack.back - ( frontBack.back - prevEnds.back) *(travelTime/deltaT) ) 
         bluePlusDeltaT =
             (opDerivXlist modOrange deltaX edges deriv1Op )
             |> List.dropFirst
             |> modList deltaT
             |> List.map2 blue plusOp
-        dbg  (List.len orangePlusDeltaT)
-        dbg  (List.len orange)
-        lineMotion  orangePlusDeltaT bluePlusDeltaT (cnt - 1) (  List.append  out blue)
+        dbg  orangePlusDeltaT
+        dbg   modOrange
+        lineMotion  orangePlusDeltaT bluePlusDeltaT force frontBack (cnt - 1) (  List.append  out blue)
       
