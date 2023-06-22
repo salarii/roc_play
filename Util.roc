@@ -1,5 +1,5 @@
 interface Util
-    exposes [getFromList, getListFromList ]
+    exposes [getFromList, getListFromList, createNode]
     imports []
     
     
@@ -13,3 +13,7 @@ getListFromList = \ list, cnt  ->
     when List.get list cnt  is 
         Ok val -> val
         Err _ -> []
+        
+        
+createNode = \ val, param->
+    {value : val, param : param}

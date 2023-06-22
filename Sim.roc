@@ -17,6 +17,9 @@ shiftList  = \ list, center  ->
 modList = \ list, mod ->
     List.map list  (\ elem -> (Num.toF32 elem) * mod )
 
+modListElem = \ list, mod ->
+    List.map list  (\ elem -> {elem  &  value : elem.value * mod } )
+
 power2 = \ cnt -> 
     cnt * cnt
 
@@ -55,12 +58,12 @@ makeCubeRec = \ x, y, z, val ,list  ->
         makeCubeRec  x y  (z - 1) val (List.append list (makeSquare x y val ) )
 
 
-makeStringCube = \ cube, separator-> 
-    List.walk cube  ""  ( \ str, sq  ->  Str.concat str (Str.concat ( makeStringSq sq separator.y ) separator.z ) )
+makeStringCube = \ cube, getRelevant, separator-> 
+    List.walk cube  ""  ( \ str, sq  ->  Str.concat str (Str.concat ( makeStringSq sq getRelevant separator.y ) separator.z ) )
      
-makeStringSq =  \ square, separator -> 
+makeStringSq =  \ square, getRelevant,separator -> 
     List.walk square  "" (\ str, list ->
-                            List.walk list str (\strIn, val -> Str.concat (Str.concat strIn  " ") ( Num.toStr val ) )
+                            List.walk list str (\strIn, val -> Str.concat (Str.concat strIn  " ") ( Num.toStr (getRelevant val) ) )
                             |> Str.concat  separator )
     
 modifyFieldSq  = \ square, x, y, val ->
@@ -83,6 +86,10 @@ poissonDerivOp = \ listPlus, listMid, listMinus, delta ->
     
 deriv1Op = \ listPlus, listMid, listMinus, delta ->   
     List.map3 listPlus listMid listMinus (\ plus , mid, minus -> (mid - minus )/delta)
+
+deriv1ElemOp = \ listPlus, listMid, listMinus, delta ->   
+    List.map3 listPlus listMid listMinus (\ plus , mid, minus -> { mid & value : (mid.value - minus.value )/delta  })
+
 
 opDerivXlist = \ list, delta, edges, op ->
     timePlus = shift list Left edges.plus 1
@@ -160,6 +167,12 @@ minusOp = \ left, right ->
 
 mulOp = \ left, right ->
      left * right
+
+plusElemOp = \ left, right ->
+     {right & value : right.value + left.value}
+
+mulElemOp = \ left, right ->
+     {right & value : right.value * left.value}
 
 solution = \ cube, cubeCharge, delta, edges -> 
     opDerivXCube cube  delta {plus : 0, minus : 0}  poissonDerivOp
@@ -267,7 +280,7 @@ returnElem = \ list, index, defElem ->
         Err OutOfBounds -> defElem
 
 getFrontBack  = \  list  ->
-    defElem = 0
+    defElem = (Util.createNode   0 1)
     lastIdx = List.len list - 1
     { front : returnElem list 0 defElem, back : returnElem list lastIdx defElem }
     
@@ -275,7 +288,7 @@ lineMotion = \ orange, blueIn, force, prevEnds, cnt, out ->
     condPar = 0.0
     deltaX = 1
     deltaT = 0.5
-    edges = {plus : 0, minus : 0}
+    edges = {plus : (Util.createNode   0 1), minus : (Util.createNode   0 1)}
     c = 1
     blue = force  blueIn deltaT  cnt    
     
@@ -283,21 +296,24 @@ lineMotion = \ orange, blueIn, force, prevEnds, cnt, out ->
         out
     else
         orangePlusDeltaT =
-            (opDerivXlist blue deltaX edges deriv1Op )
+            (opDerivXlist blue deltaX edges deriv1ElemOp )
             |> List.dropFirst
-            |> modList deltaT
-            |> List.map2 orange plusOp
+            |> modListElem deltaT
+            |> List.map2 orange (\ elemBlue, elemOrange  ->  { elemBlue & value : elemBlue.value * elemOrange.param }  )
+            |> List.map2 orange plusElemOp
 
 
         frontBack = getFrontBack orangePlusDeltaT 
         travelTime = deltaX / c
-        modOrange = addFrontAndBack orangePlusDeltaT (frontBack.front - ( frontBack.front - prevEnds.front) *(travelTime/deltaT) )  ( frontBack.back - ( frontBack.back - prevEnds.back) *(travelTime/deltaT) ) 
+        front = Util.createNode  (frontBack.front.value - ( frontBack.front.value - prevEnds.front.value) *(travelTime/deltaT) )  frontBack.front.param  
+        back = Util.createNode ( frontBack.back.value - ( frontBack.back.value - prevEnds.back.value) *(travelTime/deltaT) )   frontBack.back.param 
+        modOrange = addFrontAndBack orangePlusDeltaT front  back
         bluePlusDeltaT =
-            (opDerivXlist modOrange deltaX edges deriv1Op )
+            (opDerivXlist modOrange deltaX edges deriv1ElemOp )
             |> List.dropFirst
-            |> modList deltaT
-            |> List.map2 blue plusOp
-        dbg  orangePlusDeltaT
-        dbg   modOrange
+            |> modListElem deltaT
+            |> List.map2 blue (\ elemBlue, elemOrange  -> { elemBlue & value : elemBlue.value * elemOrange.param }  )
+            |> List.map2 blue plusElemOp
+
         lineMotion  orangePlusDeltaT bluePlusDeltaT force frontBack (cnt - 1) (  List.append  out blue)
       

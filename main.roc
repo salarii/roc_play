@@ -10,6 +10,7 @@ app "sym"
         pf.Env,
         Squares,
         Sim,
+        Util,
         pf.Dir
         ]
     provides [main] to pf
@@ -24,9 +25,11 @@ runWorld  = \ iter, worldIn ->
         runWorld (iter - 1 )  (Squares.calcWorldFlow  worldIn)  
         
 force = \ list, deltaT, cnt ->
-    (List.replace  list   50   (Num.sin ((3.14/(20.0/deltaT) ) * ( Num.toF32  cnt ))) ).list
+    (List.replace  list   50  (Util.createNode   (Num.sin ((3.14/(20.0/deltaT) ) * ( Num.toF32  cnt ))) 1 ) ).list
 
-
+getRelevant = \ elem ->
+    elem.value
+    
 main =
 
     path = Path.fromStr "out.txt"
@@ -36,12 +39,12 @@ main =
 
         #contents <- File.readUtf8 pathScript |> Task.await
         #notify = Squares.runWorld  1000 { blues: [{blue : 0.0},{blue : 1.0},{blue : 0.0}], oranges : [{orange : 0}, {orange : 0} ] }  ""
-        orange = List.repeat 0 200
-        blue = List.repeat 0 201
+        orange = List.repeat (Util.createNode   0 1) 200
+        blue = List.repeat (Util.createNode   0 1) 201
         
-        orangeCalc = Sim.lineMotion orange  blue force {front : 0, back : 0 } 12000 []
+        orangeCalc = Sim.lineMotion orange  blue force {front : (Util.createNode   0 1), back : (Util.createNode   0 1) } 12000 []
         
-        log = Sim.makeStringSq orangeCalc "\n"
+        log = Sim.makeStringSq orangeCalc getRelevant "\n"
 
         _ <- File.writeUtf8 path log |> Task.await
         Stdout.line "done"
