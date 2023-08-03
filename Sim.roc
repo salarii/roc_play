@@ -280,16 +280,16 @@ returnElem = \ list, index, defElem ->
         Err OutOfBounds -> defElem
 
 getFrontBack  = \  list  ->
-    defElem = (Util.createNode   0 1)
+    defElem = (Util.createNode   0 1 0)
     lastIdx = List.len list - 1
     { front : returnElem list 0 defElem, back : returnElem list lastIdx defElem }
     
 lineMotion = \ orange, blueIn, force, prevEnds, cnt, out ->
     condPar = 0.0
     deltaX = 1
-    deltaT = 0.5
-    edges = {plus : (Util.createNode   0 1), minus : (Util.createNode   0 1)}
-    c = 1
+    deltaT = 0.2
+    edges = {plus : (Util.createNode   0 1 0), minus : (Util.createNode   0 1 0)}
+    
     blue = force  blueIn deltaT  cnt    
     
     if cnt == 0 then 
@@ -298,21 +298,25 @@ lineMotion = \ orange, blueIn, force, prevEnds, cnt, out ->
         orangePlusDeltaT =
             (opDerivXlist blue deltaX edges deriv1ElemOp )
             |> List.dropFirst
+            |> List.map2 orange  (\ elemBlueMod, elemOrange  ->  { elemBlueMod & value : elemBlueMod.value - elemOrange.value  * elemOrange.omega }  )
             |> modListElem deltaT
-            |> List.map2 orange (\ elemBlue, elemOrange  ->  { elemBlue & value : elemBlue.value * elemOrange.param }  )
+            |> List.map2 orange (\ elemBlue, elemOrange  ->  { elemBlue & value : elemBlue.value / elemOrange.param }  )
             |> List.map2 orange plusElemOp
 
 
         frontBack = getFrontBack orangePlusDeltaT 
-        travelTime = deltaX / c
-        front = Util.createNode  (frontBack.front.value - ( frontBack.front.value - prevEnds.front.value) *(travelTime/deltaT) )  frontBack.front.param  
-        back = Util.createNode ( frontBack.back.value - ( frontBack.back.value - prevEnds.back.value) *(travelTime/deltaT) )   frontBack.back.param 
+        frontBackBlue = getFrontBack blue 
+        travelTimeFront = deltaX / (1/(Num.sqrt ( frontBack.front.param * frontBackBlue.front.param ) ))
+        travelTimeBack = deltaX / (1/(Num.sqrt ( frontBack.back.param * frontBackBlue.back.param ) ))
+
+        front = Util.createNode  (frontBack.front.value - ( frontBack.front.value - prevEnds.front.value) *(travelTimeFront/deltaT) )  frontBack.front.param  0
+        back = Util.createNode ( frontBack.back.value - ( frontBack.back.value - prevEnds.back.value) *(travelTimeBack/deltaT) )   frontBack.back.param  0
         modOrange = addFrontAndBack orangePlusDeltaT front  back
         bluePlusDeltaT =
             (opDerivXlist modOrange deltaX edges deriv1ElemOp )
             |> List.dropFirst
             |> modListElem deltaT
-            |> List.map2 blue (\ elemBlue, elemOrange  -> { elemBlue & value : elemBlue.value * elemOrange.param }  )
+            |> List.map2 blue (\ elemOrange, elemBlue  -> { elemOrange & value : elemOrange.value / elemBlue.param }  )
             |> List.map2 blue plusElemOp
 
         lineMotion  orangePlusDeltaT bluePlusDeltaT force frontBack (cnt - 1) (  List.append  out blue)

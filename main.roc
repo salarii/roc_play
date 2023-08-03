@@ -25,7 +25,7 @@ runWorld  = \ iter, worldIn ->
         runWorld (iter - 1 )  (Squares.calcWorldFlow  worldIn)  
         
 force = \ list, deltaT, cnt ->
-    (List.replace  list   50  (Util.createNode   (Num.sin ((3.14/(20.0/deltaT) ) * ( Num.toF32  cnt ))) 1 ) ).list
+    (List.replace  list   50  (Util.createNode   (Num.sin ((3.14/(100.0/deltaT) ) * ( Num.toF32  cnt ))) 1  0) ).list
 
 getRelevant = \ elem ->
     elem.value
@@ -39,10 +39,11 @@ main =
 
         #contents <- File.readUtf8 pathScript |> Task.await
         #notify = Squares.runWorld  1000 { blues: [{blue : 0.0},{blue : 1.0},{blue : 0.0}], oranges : [{orange : 0}, {orange : 0} ] }  ""
-        orange = List.repeat (Util.createNode   0 1) 200
-        blue = List.repeat (Util.createNode   0 1) 201
+        #List.join [(List
+        orange = List.repeat (Util.createNode   0 1  2.5) 200
+        blue = List.repeat (Util.createNode   0 1  0) 201
         
-        orangeCalc = Sim.lineMotion orange  blue force {front : (Util.createNode   0 1), back : (Util.createNode   0 1) } 12000 []
+        orangeCalc = Sim.lineMotion orange  blue force {front : (Util.createNode   0 1 0 ), back : (Util.createNode   0 1 0) } 12000 []
         
         log = Sim.makeStringSq orangeCalc getRelevant "\n"
 

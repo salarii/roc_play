@@ -15,5 +15,5 @@ getListFromList = \ list, cnt  ->
         Err _ -> []
         
         
-createNode = \ val, param->
-    {value : val, param : param}
+createNode = \ val, param, omega->
+    {value : val, param : param, omega : omega }

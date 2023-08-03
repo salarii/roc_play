@@ -20,7 +20,7 @@ serviceConfig = \ created, config ->
 
 
 force = \ list, deltaT, cnt ->
-    (List.replace  list  10  (Util.createNode   1 1)).list
+    (List.replace  list  10  (Util.createNode   1 1 0)).list
 
 getRelevant = \ elem ->
     elem.value
@@ -32,10 +32,10 @@ test  = \ clad,  mad ->
     mad clad
 main =
     
-    orange = List.repeat (Util.createNode   0 1) 20
-    blue =  List.repeat (Util.createNode   0 1) 21
+    orange = List.repeat (Util.createNode   0 5 0) 20
+    blue =  List.repeat (Util.createNode   0 1  0) 21
     
-    orangeCalc = Sim.lineMotion orange  blue force {front : (Util.createNode   0 1), back : (Util.createNode   0 1) } 40 []
+    orangeCalc = Sim.lineMotion orange  blue force {front : (Util.createNode   0 1 0), back : (Util.createNode   0 1 0) } 40 []
     Stdout.line ( Sim.makeStringSq orangeCalc getRelevant  "\n" )
     #Stdout.line  (Sim.makeStringCube cube { z : "\n\n",y : "\n" } )
     #Stdout.line  "dadsa"
