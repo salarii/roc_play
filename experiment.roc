@@ -22,6 +22,11 @@ serviceConfig = \ created, config ->
 force = \ list, deltaT, cnt ->
     (List.replace  list  10  (Util.createNode   1 1 0)).list
 
+
+forceSq = \ sq, deltaT, cnt ->
+    sq
+
+
 getRelevant = \ elem ->
     elem.value
 
@@ -35,10 +40,15 @@ main =
     orange = List.repeat (Util.createNode   0 5 0) 20
     blue =  List.repeat (Util.createNode   0 1  0) 21
     
-    orangeCalc = Sim.lineMotion orange  blue force {front : (Util.createNode   0 1 0), back : (Util.createNode   0 1 0) } 40 []
-    Stdout.line ( Sim.makeStringSq orangeCalc getRelevant  "\n" )
-    #Stdout.line  (Sim.makeStringCube cube { z : "\n\n",y : "\n" } )
-    #Stdout.line  "dadsa"
+    xOrange = Sim.makeSquare  2   3   (Util.createNode   0 5 0)
+    yOrange = Sim.makeSquare  3   2   (Util.createNode   0 5 0)
+    zBlue  = Sim.makeSquare  2   2   (Util.createNode   0 5 0)
+    
+    result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 3  {zField  : [], xField : [],  yField : []}
+    
+    #orangeCalc = Sim.lineMotion orange  blue force {front : (Util.createNode   0 1 0), back : (Util.createNode   0 1 0) } 40 []
+    Stdout.line ( Sim.makeStringCube result.zField getRelevant  {y:"\n",z:"\n"} )
+
     
 
     

@@ -27,27 +27,36 @@ runWorld  = \ iter, worldIn ->
 force = \ list, deltaT, cnt ->
     (List.replace  list   50  (Util.createNode   (Num.sin ((3.14/(100.0/deltaT) ) * ( Num.toF32  cnt ))) 1  0) ).list
 
+forceSq = \ sq, deltaT, cnt ->
+    sq
+
+
 getRelevant = \ elem ->
     elem.value
     
 main =
-
-    path = Path.fromStr "out.txt"
-    pathScript = Path.fromStr "script.txt"
     task =
-        #_ <- Stdout.line "Writing a string to out.txt" |> Task.await
-
-        #contents <- File.readUtf8 pathScript |> Task.await
-        #notify = Squares.runWorld  1000 { blues: [{blue : 0.0},{blue : 1.0},{blue : 0.0}], oranges : [{orange : 0}, {orange : 0} ] }  ""
-        #List.join [(List
-        orange = List.repeat (Util.createNode   0 1  2.5) 200
-        blue = List.repeat (Util.createNode   0 1  0) 201
-        
-        orangeCalc = Sim.lineMotion orange  blue force {front : (Util.createNode   0 1 0 ), back : (Util.createNode   0 1 0) } 12000 []
-        
-        log = Sim.makeStringSq orangeCalc getRelevant "\n"
-
-        _ <- File.writeUtf8 path log |> Task.await
+        # 1D  simulation
+        #path = Path.fromStr "out.txt"
+        #orange = List.repeat (Util.createNode   0 1  2.5) 200
+        #blue = List.repeat (Util.createNode   0 1  0) 201
+        #orangeCalc = Sim.lineMotion orange  blue force {front : (Util.createNode   0 1 0 ), back : (Util.createNode   0 1 0) } 12000 []
+        #log = Sim.makeStringSq orangeCalc getRelevant "\n"
+        #_ <- File.writeUtf8 path log |> Task.await
+        # 2D simulation
+        zFieldPath = Path.fromStr "zField.txt"
+        xFieldPath = Path.fromStr "xField.txt"
+        yFieldPath = Path.fromStr "yField.txt"
+        xOrange = Sim.makeSquare  2   3   (Util.createNode   0 5 0)
+        yOrange = Sim.makeSquare  3   2   (Util.createNode   0 5 0)
+        zBlue  = Sim.makeSquare  2   2   (Util.createNode   0 5 0)
+        result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 3  {zField  : [], xField : [],  yField : []}
+        zlog = ( Sim.makeStringCube result.zField getRelevant  {y:"\n",z:""} )
+        xlog = ( Sim.makeStringCube result.xField getRelevant  {y:"\n",z:""} )
+        ylog = ( Sim.makeStringCube result.yField getRelevant  {y:"\n",z:""} )
+        _ <- File.writeUtf8 zFieldPath zlog |> Task.await
+        _ <- File.writeUtf8 xFieldPath xlog |> Task.await
+        _ <- File.writeUtf8 yFieldPath ylog |> Task.await
         Stdout.line "done"
         #Stdout.line "I read the file back. Its contents: \"\(contents)\""
 
