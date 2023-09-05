@@ -24,8 +24,11 @@ force = \ list, deltaT, cnt ->
 
 
 forceSq = \ sq, deltaT, cnt ->
-    sq
+    Sim.modifyFieldSq  sq  9 9   (Util.createNode  1 1 0)
 
+forceCube = \ cubeX1, cubeY1, cubeZ1, cubeX2, cubeY2, cubeZ2, deltaT, cnt ->
+    modifZ1  = Sim.modifyFieldCube  cubeZ1  1 1 1  (Util.createNode  1 1 0)
+    {xField1 : cubeX1,  yField1 : cubeY1, zField1  : modifZ1, xField2 : cubeX2,  yField2 : cubeY2, zField2  : cubeZ2 } 
 
 getRelevant = \ elem ->
     elem.value
@@ -35,22 +38,42 @@ createWorld = \ configList ->
 
 test  = \ clad,  mad ->
     mad clad
+    
+printCubes = \ cubes ->
+    List.walk cubes  "" 
+    ( \ state, cube   -> state
+        |> Str.concat ( Sim.makeStringCube cube getRelevant  {y:"\n",z:"\n"} ) 
+        |> Str.concat "\nTime + 1\n" )  
+    
 main =
+    #line  simulation
+    #orange = List.repeat (Util.createNode   0 1 0) 20
+    #blue =  List.repeat (Util.createNode   0 1  0) 21
+    #size  = 20
     
-    orange = List.repeat (Util.createNode   0 5 0) 20
-    blue =  List.repeat (Util.createNode   0 1  0) 21
+    # square simeulation
+    #xOrange = Sim.makeSquare  size   (size + 1)   (Util.createNode   0 1 0)
+    #yOrange = Sim.makeSquare  (size + 1)   size   (Util.createNode   0 1 0)
+    #zBlue  = Sim.makeSquare  size   size   (Util.createNode   0 1 0)
     
-    xOrange = Sim.makeSquare  2   3   (Util.createNode   0 5 0)
-    yOrange = Sim.makeSquare  3   2   (Util.createNode   0 5 0)
-    zBlue  = Sim.makeSquare  2   2   (Util.createNode   0 5 0)
+    #result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 5  {zField  : [], xField : [],  yField : []}
+    #result =  Sim.testFun zBlue forceSq
+    #Stdout.line ( Sim.makeStringSq result getRelevant  "\n" )
+    #Stdout.line ( Sim.makeStringCube result.zField getRelevant  {y:"\n",z:"\n"} )
+    #Stdout.line ( Sim.makeStringCube result.xField getRelevant  {y:"\n",z:"\n"} )
+    #Stdout.line ( Sim.makeStringCube result.yField getRelevant  {y:"\n",z:"\n"} )
     
-    result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 3  {zField  : [], xField : [],  yField : []}
+    # cube  simulation
+    size  = 4
+    xOrange = Sim.makeCube size (size + 1) (size + 1) (Util.createNode   0 1 0)
+    yOrange = Sim.makeCube (size + 1) size (size + 1) (Util.createNode   0 1 0)
+    zOrange = Sim.makeCube (size + 1) (size + 1) size (Util.createNode   0 1 0)
     
-    #orangeCalc = Sim.lineMotion orange  blue force {front : (Util.createNode   0 1 0), back : (Util.createNode   0 1 0) } 40 []
-    Stdout.line ( Sim.makeStringCube result.zField getRelevant  {y:"\n",z:"\n"} )
-
+    xBlue = Sim.makeCube size size size (Util.createNode   0 1 0)
+    yBlue = Sim.makeCube size size size (Util.createNode   0 1 0)
+    zBlue = Sim.makeCube size size size (Util.createNode   0 1 0)
     
-
-    
+    result = Sim.xyzVariationSim xOrange yOrange zOrange xBlue yBlue zBlue  forceCube 2  {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
+    Stdout.line ( printCubes   result.zField1)   
     
     

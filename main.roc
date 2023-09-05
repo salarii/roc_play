@@ -28,7 +28,7 @@ force = \ list, deltaT, cnt ->
     (List.replace  list   50  (Util.createNode   (Num.sin ((3.14/(100.0/deltaT) ) * ( Num.toF32  cnt ))) 1  0) ).list
 
 forceSq = \ sq, deltaT, cnt ->
-    sq
+    Sim.modifyFieldSq  sq  9  9   (Util.createNode  1 1 0)
 
 
 getRelevant = \ elem ->
@@ -47,10 +47,11 @@ main =
         zFieldPath = Path.fromStr "zField.txt"
         xFieldPath = Path.fromStr "xField.txt"
         yFieldPath = Path.fromStr "yField.txt"
-        xOrange = Sim.makeSquare  2   3   (Util.createNode   0 5 0)
-        yOrange = Sim.makeSquare  3   2   (Util.createNode   0 5 0)
-        zBlue  = Sim.makeSquare  2   2   (Util.createNode   0 5 0)
-        result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 3  {zField  : [], xField : [],  yField : []}
+        size  = 20
+        xOrange = Sim.makeSquare  size   (size +1)   (Util.createNode   0 1 0)
+        yOrange = Sim.makeSquare  (size+1)   size  (Util.createNode   0 1 0)
+        zBlue  = Sim.makeSquare  size   size   (Util.createNode   0 1 0)
+        result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 5000  {zField  : [], xField : [],  yField : []}
         zlog = ( Sim.makeStringCube result.zField getRelevant  {y:"\n",z:""} )
         xlog = ( Sim.makeStringCube result.xField getRelevant  {y:"\n",z:""} )
         ylog = ( Sim.makeStringCube result.yField getRelevant  {y:"\n",z:""} )
