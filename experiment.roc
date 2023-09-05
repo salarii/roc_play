@@ -72,8 +72,11 @@ main =
     xBlue = Sim.makeCube size size size (Util.createNode   0 1 0)
     yBlue = Sim.makeCube size size size (Util.createNode   0 1 0)
     zBlue = Sim.makeCube size size size (Util.createNode   0 1 0)
+
+    result = Sim.testFun  zBlue 
+    Stdout.line ( Sim.makeStringCube result getRelevant  {y:"\n",z:"\n"} ) 
     
-    result = Sim.xyzVariationSim xOrange yOrange zOrange xBlue yBlue zBlue  forceCube 2  {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
-    Stdout.line ( printCubes   result.zField1)   
+    #result = Sim.xyzVariationSim xOrange yOrange zOrange xBlue yBlue zBlue  forceCube 2  {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
+    #Stdout.line ( printCubes   result.yField2)   
     
     
