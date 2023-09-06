@@ -446,6 +446,9 @@ testFun =  \ field ->
     
     modifyFieldCube field 1 1 1 (Util.createNode   1 1 0)
     |> (opDerivZCube  deltaXY edges deriv1ElemOp )
+     
+getRelevantt = \ elem ->
+    elem.value
       
 xyzVariationSim = \ xDirectionField1, yDirectionField1, zDirectionField1, xDirectionField2, yDirectionField2, zDirectionField2,  force, cnt, out  -> 
     deltaXY = 1
@@ -458,36 +461,42 @@ xyzVariationSim = \ xDirectionField1, yDirectionField1, zDirectionField1, xDirec
         out
     else
         x1DirectionFieldPlusDeltaT =
-            (opDerivYCube modified.zField2 deltaXY edges deriv1ElemOp )
-            |> cubeElemOperation (opDerivZCube  modified.yField2 deltaXY edges deriv1ElemOp) minusElemOp
+            (opDerivYCube (addFirstBackCubeY modified.zField2 edges.minus edges.plus) deltaXY edges deriv1ElemOp )
+            |> removeFirstCubeY 
+            |> cubeElemOperation (removeFirstCubeZ (opDerivZCube  (addFirstBackCubeZ modified.yField2 edges.minus edges.plus) deltaXY edges deriv1ElemOp)) minusElemOp
             |> cubeElemOperation modified.xField1  (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value + (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
 
         y1DirectionFieldPlusDeltaT = 
-            (opDerivZCube modified.xField2 deltaXY edges deriv1ElemOp )
-            |> cubeElemOperation (opDerivXCube  modified.zField2 deltaXY edges deriv1ElemOp) minusElemOp
+            (opDerivZCube  (addFirstBackCubeZ modified.xField2 edges.minus edges.plus) deltaXY edges deriv1ElemOp)
+            |> removeFirstCubeZ
+            |> cubeElemOperation (removeFirstCubeX (opDerivXCube  (addFirstBackCubeX modified.zField2 edges.minus edges.plus) deltaXY edges deriv1ElemOp)) minusElemOp
             |> cubeElemOperation modified.yField1  (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value + (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
 
         z1DirectionFieldPlusDeltaT = 
-            (opDerivXCube modified.yField2 deltaXY edges deriv1ElemOp )
-            |> cubeElemOperation (opDerivYCube  modified.xField2 deltaXY edges deriv1ElemOp) minusElemOp
+            (opDerivXCube (addFirstBackCubeX modified.yField2 edges.minus edges.plus) deltaXY edges deriv1ElemOp )
+            |> removeFirstCubeX
+            |> cubeElemOperation (removeFirstCubeY (opDerivYCube   (addFirstBackCubeY modified.xField2 edges.minus edges.plus) deltaXY edges deriv1ElemOp)) minusElemOp
             |> cubeElemOperation modified.zField1 (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value + (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
-            
+        #dbg   ( Sim.makeStringCube (addFirstBackCubeX modified.yField2 edges.minus edges.plus) getRelevantt  {y:"\n",z:"\n"} )   
+        #dbg   ( Sim.makeStringCube (addFirstBackCubeY modified.xField2 edges.minus edges.plus)  getRelevantt  {y:"\n",z:"\n"} )
+        #dbg   ( Sim.makeStringCube modified.zField1 getRelevantt  {y:"\n",z:"\n"} )             
+        #dbg   ( Sim.makeStringCube z1DirectionFieldPlusDeltaT getRelevantt  {y:"\n",z:"\n"} )   
         x2DirectionFieldPlusDeltaT =
-            (opDerivZCube (addFirstBackCubeZ y1DirectionFieldPlusDeltaT edges.minus edges.plus) deltaXY edges deriv1ElemOp )
+            (opDerivZCube y1DirectionFieldPlusDeltaT  deltaXY edges deriv1ElemOp )
             |> removeFirstCubeZ 
-            |> cubeElemOperation (removeFirstCubeY(opDerivYCube  (addFirstBackCubeY z1DirectionFieldPlusDeltaT  edges.minus edges.plus) deltaXY edges deriv1ElemOp)) minusElemOp
+            |> cubeElemOperation (removeFirstCubeY(opDerivYCube  z1DirectionFieldPlusDeltaT  deltaXY edges deriv1ElemOp)) minusElemOp
             |> cubeElemOperation modified.xField2  (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value + (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
 
         y2DirectionFieldPlusDeltaT = 
-            (opDerivXCube (addFirstBackCubeX z1DirectionFieldPlusDeltaT  edges.minus edges.plus) deltaXY edges deriv1ElemOp )
+            (opDerivXCube z1DirectionFieldPlusDeltaT  deltaXY edges deriv1ElemOp )
             |> removeFirstCubeX 
-            |> cubeElemOperation (removeFirstCubeZ (opDerivZCube  (addFirstBackCubeZ x1DirectionFieldPlusDeltaT  edges.minus edges.plus) deltaXY edges deriv1ElemOp)) minusElemOp
+            |> cubeElemOperation (removeFirstCubeZ (opDerivZCube  x1DirectionFieldPlusDeltaT deltaXY edges deriv1ElemOp)) minusElemOp
             |> cubeElemOperation modified.yField2  (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value + (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
 
         z2DirectionFieldPlusDeltaT = 
             (opDerivYCube (addFirstBackCubeY x1DirectionFieldPlusDeltaT edges.minus edges.plus) deltaXY edges deriv1ElemOp )
             |> removeFirstCubeY 
-            |> cubeElemOperation (removeFirstCubeX(opDerivXCube  (addFirstBackCubeX y1DirectionFieldPlusDeltaT  edges.minus edges.plus) deltaXY edges deriv1ElemOp)) minusElemOp
+            |> cubeElemOperation (removeFirstCubeX(opDerivXCube  y1DirectionFieldPlusDeltaT deltaXY edges deriv1ElemOp)) minusElemOp
             |> cubeElemOperation modified.yField2  (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value + (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
  
         xyzVariationSim   x1DirectionFieldPlusDeltaT y1DirectionFieldPlusDeltaT z1DirectionFieldPlusDeltaT x2DirectionFieldPlusDeltaT y2DirectionFieldPlusDeltaT z2DirectionFieldPlusDeltaT force (cnt - 1)  { out & xField1 : List.append out.xField1  y1DirectionFieldPlusDeltaT,  yField1 : List.append out.yField1  y1DirectionFieldPlusDeltaT, zField1 : List.append out.zField1  z1DirectionFieldPlusDeltaT, xField2 : List.append out.xField2  x2DirectionFieldPlusDeltaT,  yField2 : List.append out.yField2  y2DirectionFieldPlusDeltaT, zField2  : List.append out.zField2 z2DirectionFieldPlusDeltaT } 
