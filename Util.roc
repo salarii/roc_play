@@ -1,12 +1,12 @@
 interface Util
-    exposes [getFromList, getListFromList, createNode]
+    exposes [getFromList, getListFromList, createNode, createNodeAni]
     imports []
     
     
-getFromList = \ list, cnt  ->
+getFromList = \ list, cnt, def  ->
     when List.get list cnt  is 
         Ok val -> val
-        Err _ -> 0.0f32
+        Err _ -> def
 
 
 getListFromList = \ list, cnt  ->
@@ -17,3 +17,6 @@ getListFromList = \ list, cnt  ->
         
 createNode = \ val, param, omega->
     {value : val, param : param, omega : omega }
+    
+createNodeAni = \ val, param, omegaX, omegaY, omegaZ ->
+    {value : val, param : param, omega : {x : omegaX, y: omegaY, z: omegaZ} }

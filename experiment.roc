@@ -5,15 +5,15 @@
 
 
 createGold = \ gold, cnt ->   
-    elem = List.repeat gold   (Num.round (Util.getFromList cnt 1) )
-    List.repeat  elem  (Num.round(Util.getFromList cnt 0))
+    elem = List.repeat gold   (Num.round (Util.getFromList cnt 1  0.0) )
+    List.repeat  elem  (Num.round(Util.getFromList cnt 0 0.0 ))
 
 
 serviceConfig = \ created, config ->
     if Parsing.checkIfPresent  config  (Set.fromList [Gold, Nodes ]) == Bool.true then
         goldConf = Parsing.getTagFromConfig Gold config 
         nodeConf = Parsing.getTagFromConfig Nodes config
-        value = Util.getFromList goldConf.vals  0  
+        value = Util.getFromList goldConf.vals  0  0.0 
         createGold value nodeConf.vals 
     else
         created
