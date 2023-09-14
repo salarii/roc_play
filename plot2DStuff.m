@@ -25,7 +25,7 @@ z = zeros(zRowsParam,zColumns);
  hold off;
  title ("quiver3 ");
 
- p = 10
+ p = 1
  for  j = 1:pagesCnt/p
  #h = quiver3 (xx, yy, z, 0, 0.01, Zreshaped(:,:,j), 'AutoScale','off',...
   #          'MaxHeadSize',0.1,

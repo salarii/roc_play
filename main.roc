@@ -15,8 +15,6 @@ app "sym"
         ]
     provides [main] to pf
  
-
-
 steps  =4000
 runWorld  = \ iter, worldIn ->
     if iter == 0 then
@@ -30,6 +28,8 @@ force = \ list, deltaT, cnt ->
 forceSq = \ sq, deltaT, cnt ->
     Sim.modifyFieldSq  sq  9  9   (Util.createNode  1 1 0)
 
+forceSq2 = \ sq, deltaT, cnt ->
+    Sim.modifyFieldSq  sq  9 9  (Util.createNodeAni  1 1 0 0 0)
 
 getRelevant = \ elem ->
     elem.value
@@ -43,15 +43,24 @@ main =
         #orangeCalc = Sim.lineMotion orange  blue force {front : (Util.createNode   0 1 0 ), back : (Util.createNode   0 1 0) } 12000 []
         #log = Sim.makeStringSq orangeCalc getRelevant "\n"
         #_ <- File.writeUtf8 path log |> Task.await
-        # 2D simulation
         zFieldPath = Path.fromStr "zField.txt"
         xFieldPath = Path.fromStr "xField.txt"
         yFieldPath = Path.fromStr "yField.txt"
         size  = 20
-        xOrange = Sim.makeSquare  size   (size +1)   (Util.createNode   0 1 0)
-        yOrange = Sim.makeSquare  (size+1)   size  (Util.createNode   0 1 0)
-        zBlue  = Sim.makeSquare  size   size   (Util.createNode   0 1 0)
-        result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 5000  {zField  : [], xField : [],  yField : []}
+        # 2D simulation
+        #xOrange = Sim.makeSquare  size   (size +1)   (Util.createNode   0 1 0)
+        #yOrange = Sim.makeSquare  (size+1)   size  (Util.createNode   0 1 0)
+        #zBlue  = Sim.makeSquare  size   size   (Util.createNode   0 1 0)
+        #result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 5000  {zField  : [], xField : [],  yField : []}        
+        # 2D simulation 2
+        xOrange = Sim.makeSquare  size   (size + 1)   (Util.createNodeAni   0 1 0.1 0.1 0.1)
+        yOrange = Sim.makeSquare  (size + 1)   size   (Util.createNodeAni   0 1 0.1 0.1 0.1)
+        zBlue  = Sim.makeSquare  size   size   (Util.createNodeAni   0 1 0 0 0)
+        
+        result = Sim.xyVariationSim2  xOrange yOrange zBlue forceSq2 1000 {zField  : [], xField : [],  yField : []}
+        
+            
+
         zlog = ( Sim.makeStringCube result.zField getRelevant  {y:"\n",z:""} )
         xlog = ( Sim.makeStringCube result.xField getRelevant  {y:"\n",z:""} )
         ylog = ( Sim.makeStringCube result.yField getRelevant  {y:"\n",z:""} )
