@@ -66,6 +66,11 @@ makeStringSq =  \ square, getRelevant,separator ->
                             List.walk list str (\strIn, val -> Str.concat (Str.concat strIn  " ") ( Num.toStr (getRelevant val) ) )
                             |> Str.concat  separator )
     
+getFeldSq  = \ sq, x, y, def ->
+    Util.getListFromList sq  0
+    |> Util.getFromList  x  def
+
+    
 modifyFieldSq  = \ square, x, y, val ->
     Util.getListFromList square y
     |> List.replace x val 
@@ -121,6 +126,14 @@ getCubeSizeY = \ cube ->
 getCubeSizeZ = \ cube ->
     List.len cube
 
+getSqSizeX = \ sq ->
+    List.len (Util.getListFromList sq 0)
+    
+    
+getSqSizeY = \ sq ->
+    List.len sq 
+
+
 addFirstBackCubeX = \ cube, front, back ->
     List.map cube  (\ sq -> addFirstBackSqX sq front  back  )
 
@@ -131,6 +144,7 @@ addFirstBackCubeZ = \ cube, front, back ->
     cube  
     |> List.prepend (makeSquare   (getCubeSizeX  cube) (getCubeSizeY  cube)  front )
     |> List.append (makeSquare   (getCubeSizeX  cube) (getCubeSizeY  cube)  back )
+
 
 getFeldCube  = \ cube, x, y, z, def ->
     Util.getListFromList cube z
@@ -409,7 +423,7 @@ calculateDivModif = \ elem, deltaT  ->
           
 xyVariationSim = \  xDirectionField1, yDirectionField1, zDirectionField2, force, cnt, out  -> 
     deltaXY = 1
-    deltaT = 0.01
+    deltaT = 0.1
     edges = {plus : (Util.createNode   0 1 0), minus : (Util.createNode   0 1 0)}
     
     zForced = force  zDirectionField2 deltaT  cnt  
@@ -421,13 +435,16 @@ xyVariationSim = \  xDirectionField1, yDirectionField1, zDirectionField2, force,
             addFirstBackSqY zForced edges.minus  edges.plus
             |> opDerivYSq  deltaXY edges deriv1ElemOp 
             |> removeFirstSqY
-            |> sqElemOperation xDirectionField1  (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value - (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
-
+            |> sqElemOperation xDirectionField1  (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value - (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
+        test = addFirstBackSqY zForced edges.minus  edges.plus
+            |> opDerivYSq  deltaXY edges deriv1ElemOp 
+            |> removeFirstSqY
+            |> sqElemOperation xDirectionField1  (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateDivModif elemSelf deltaT ) }  )
         yDirectionField1PlusDeltaT = 
             addFirstBackSqX zForced edges.minus  edges.plus
             |> opDerivXSq  deltaXY edges deriv1ElemOp 
             |> removeFirstSqX
-            |> sqElemOperation yDirectionField1  (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value + (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
+            |> sqElemOperation yDirectionField1  (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value + (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
 
         modXDir = 
             opDerivYSq xDirectionField1PlusDeltaT deltaXY edges deriv1ElemOp 
@@ -439,9 +456,9 @@ xyVariationSim = \  xDirectionField1, yDirectionField1, zDirectionField2, force,
             
         zDirectionField2PlusDeltaT =
             sqElemOperation modXDir modYDir minusElemOp
-            |> sqElemOperation zDirectionField2 (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value + (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
+            |> sqElemOperation zDirectionField2 (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModif elemSelf deltaT )*elemSelf.value + (calculateDivModif elemSelf deltaT ) * elemMod.value }  )
 
-        xyVariationSim   xDirectionField1PlusDeltaT yDirectionField1PlusDeltaT zDirectionField2PlusDeltaT  force  (cnt - 1) {   out & zField  : addXYLayerToCube  out.zField zDirectionField2PlusDeltaT, xField : addXYLayerToCube  out.xField xDirectionField1PlusDeltaT ,  yField :  addXYLayerToCube  out.yField  yDirectionField1PlusDeltaT }
+        xyVariationSim   xDirectionField1PlusDeltaT yDirectionField1PlusDeltaT zDirectionField2PlusDeltaT  force  (cnt - 1) {   out & zField  : addXYLayerToCube  out.zField zDirectionField2PlusDeltaT, xField : addXYLayerToCube  out.xField test ,  yField :  addXYLayerToCube  out.yField  yDirectionField1PlusDeltaT }
       
 testFun =  \ field -> 
     deltaXY = 1
@@ -457,7 +474,7 @@ getRelevantt = \ elem ->
       
 xyzVariationSim = \ xDirectionField1, yDirectionField1, zDirectionField1, xDirectionField2, yDirectionField2, zDirectionField2,  force, cnt, out  -> 
     deltaXY = 1
-    deltaT = 0.2
+    deltaT = 0.1
     edges = {minus : (Util.createNode   0 1 0), plus : (Util.createNode   0 1 0)}
     
     modified = force  xDirectionField1 yDirectionField1 zDirectionField1 xDirectionField2 yDirectionField2 zDirectionField2 deltaT  cnt  
@@ -514,7 +531,7 @@ calculateDivModifAni = \ param, omega, deltaT  ->
     (2*deltaT)/(2*param + deltaT * omega)
 
 auxDalculateSumModifAni = \ param, omegaNum, omegaDen, deltaT  ->
-    (2*param - deltaT * omegaNum)/((2*param + deltaT * omegaDen)/param)
+    (2*param + deltaT * omegaNum)/((2*param + deltaT * omegaDen)/param)
 
 auxDalculateSubModifAni = \ param, omegaNum, omegaDen, deltaT  ->
     (2*param - deltaT * omegaNum)/((2*param + deltaT * omegaDen)/param)
@@ -532,12 +549,12 @@ xyVariationSim2Internal = \  xDirectionAuxField1, yDirectionAuxField1, xDirectio
         xDirectionAuxField1PlusDeltaT =
             (opDerivYSq (addFirstBackSqY zForced edges.minus edges.plus) deltaXY edges deriv1ElemOp )
             |> removeFirstSqY 
-            |> sqElemOperation xDirectionAuxField1  (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.y deltaT )*elemSelf.value - (calculateDivModifAni elemSelf.param elemSelf.omega.y deltaT ) * elemMod.value }  )
+            |> sqElemOperation xDirectionAuxField1  (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.y deltaT )*elemSelf.value - (calculateDivModifAni elemSelf.param elemSelf.omega.y deltaT ) * elemMod.value }  )
 
         yDirectionAuxField1PlusDeltaT = 
             (opDerivXSq  (addFirstBackSqX zForced edges.minus edges.plus) deltaXY edges deriv1ElemOp) 
             |> removeFirstSqX
-            |> sqElemOperation yDirectionAuxField1  (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.z deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.z deltaT ) * elemMod.value }  )
+            |> sqElemOperation yDirectionAuxField1  (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.z deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.z deltaT ) * elemMod.value }  )
 
         xDirectionField1PlusDeltaT =
             sqElemOperation xDirectionAuxField1PlusDeltaT xDirectionAuxField1 
@@ -549,12 +566,22 @@ xyVariationSim2Internal = \  xDirectionAuxField1, yDirectionAuxField1, xDirectio
                 (\ auxPlusDelta, aux -> { aux & value : (auxDalculateSumModifAni aux.param aux.omega.y aux.omega.x deltaT ) * auxPlusDelta.value - (auxDalculateSubModifAni  aux.param aux.omega.y aux.omega.x deltaT ) * aux.value })
             |> sqElemOperation yDirectionField1  (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.x deltaT)* field.value + aux.value })
 
+        tmp =
+            (opDerivYSq   xDirectionField1PlusDeltaT  deltaXY edges deriv1ElemOp)
+            |> removeFirstSqY
+            |> sqElemOperation (removeFirstSqX (opDerivXSq yDirectionField1PlusDeltaT deltaXY edges deriv1ElemOp )) minusElemOp            
+        
+        tmpModif = 
+        #    removeFirstSqX (opDerivXSq yDirectionField1PlusDeltaT deltaXY edges deriv1ElemOp )
+            (opDerivYSq   xDirectionField1PlusDeltaT  deltaXY edges deriv1ElemOp)
+            |> removeFirstSqY
+            |> sqElemOperation (removeFirstSqX (opDerivXSq yDirectionField1PlusDeltaT deltaXY edges deriv1ElemOp )) minusElemOp  
             
         zDirectionAuxField2PlusDeltaT = 
             (opDerivYSq   xDirectionField1PlusDeltaT  deltaXY edges deriv1ElemOp)
             |> removeFirstSqY
             |> sqElemOperation (removeFirstSqX (opDerivXSq yDirectionField1PlusDeltaT deltaXY edges deriv1ElemOp )) minusElemOp
-            |> sqElemOperation zDirectionAuxField2 (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.x deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.x deltaT ) * elemMod.value }  )
+            |> sqElemOperation zDirectionAuxField2 (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.x deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.x deltaT ) * elemMod.value }  )
         #dbg ( Sim.makeStringSq xDirectionAuxField1PlusDeltaT getRelevantt  "\n" )
         #dbg ( Sim.makeStringSq yDirectionAuxField1PlusDeltaT getRelevantt  "\n" )
                
@@ -582,13 +609,13 @@ xyzVariationSim2Internal = \ xDirectionAuxField1, yDirectionAuxField1, zDirectio
             (opDerivYCube (addFirstBackCubeY modified.zField2 edges.minus edges.plus) deltaXY edges deriv1ElemOp )
             |> removeFirstCubeY 
             |> cubeElemOperation (removeFirstCubeZ (opDerivZCube  (addFirstBackCubeZ modified.yField2 edges.minus edges.plus) deltaXY edges deriv1ElemOp)) minusElemOp
-            |> cubeElemOperation xDirectionAuxField1  (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.y deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.y deltaT ) * elemMod.value }  )
+            |> cubeElemOperation xDirectionAuxField1  (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.y deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.y deltaT ) * elemMod.value }  )
 
         yDirectionAuxField1PlusDeltaT = 
             (opDerivZCube  (addFirstBackCubeZ modified.xField2 edges.minus edges.plus) deltaXY edges deriv1ElemOp)
             |> removeFirstCubeZ
             |> cubeElemOperation (removeFirstCubeX (opDerivXCube  (addFirstBackCubeX modified.zField2 edges.minus edges.plus) deltaXY edges deriv1ElemOp)) minusElemOp
-            |> cubeElemOperation yDirectionAuxField1  (\ elemMod, elemSelf  ->  { elemMod & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.z deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.z deltaT ) * elemMod.value }  )
+            |> cubeElemOperation yDirectionAuxField1  (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.z deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.z deltaT ) * elemMod.value }  )
 
         zDirectionAuxField1PlusDeltaT = 
             (opDerivXCube (addFirstBackCubeX modified.yField2 edges.minus edges.plus) deltaXY edges deriv1ElemOp )
@@ -659,7 +686,34 @@ iterate = \ arg, cnt, exe  ->
         iterate (exe arg cnt) (cnt - 1) exe 
 
 
-pmlIze  = \ cube, layers   ->
+pmlIzeSq  = \ sq, layers   ->
+    m = 2.5
+    r0 = 0.00001
+    mi = 1
+    epsi = 1
+    d = layers
+    
+    #omegaMax = (m + 1 ) *Num.Log( r0 ) /(2* d * sqrt( mi / epsi ))
+    #( Num.pow (x/d) m  )* omegaMax
+ 
+    sizeX = getSqSizeX sq
+    sizeY = getSqSizeY sq     
+
+    xEgesAlteredSq = iterate sq sizeY ( \ sq1, cntY ->
+            iterate sq1 layers ( \ sq2, cntX-> 
+                modifFront = getFeldSq  sq2 cntX  cntY (Util.createNodeAni   0 1 0 0 0)
+                modifBack = getFeldSq  sq2 (layers - cntX) cntY (Util.createNodeAni   0 1 0 0 0)
+                modifyFieldSq sq2 cntX  cntY  {modifFront &  omega : { x:1, y :  modifFront.omega.y, z: modifFront.omega.z } }     
+                |> modifyFieldSq  (layers - cntX)  cntY  {modifBack &  omega : { x:1, y :  modifBack.omega.y, z: modifBack.omega.z } }  )  )
+
+    iterate xEgesAlteredSq sizeX ( \ sq1, cntY ->
+            iterate sq1 layers ( \ sq2, cntX-> 
+                modifFront = getFeldSq  sq2 cntX  cntY (Util.createNodeAni   0 1 0 0 0)
+                modifBack = getFeldSq  sq2 cntX (layers - cntY) (Util.createNodeAni   0 1 0 0 0)
+                modifyFieldSq sq2 cntX  cntY  {modifFront &  omega : { x:1, y :  modifFront.omega.y, z: modifFront.omega.z } }     
+                |> modifyFieldSq  cntX  (layers - cntY)  {modifBack &  omega : { x:1, y :  modifBack.omega.y, z: modifBack.omega.z } }  )  )
+
+pmlIzeCube  = \ cube, layers   ->
     m = 2.5
     r0 = 0.00001
     mi = 1

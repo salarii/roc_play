@@ -29,8 +29,10 @@ forceSq = \ sq, deltaT, cnt ->
     Sim.modifyFieldSq  sq  9  9   (Util.createNode  1 1 0)
 
 forceSq2 = \ sq, deltaT, cnt ->
-    Sim.modifyFieldSq  sq  9 9  (Util.createNodeAni  1 1 0 0 0)
+    Sim.modifyFieldSq sq 9 9  (Util.createNodeAni  1 1 0 0 0)
 
+
+    
 getRelevant = \ elem ->
     elem.value
     
@@ -50,12 +52,12 @@ main =
         # 2D simulation
         #xOrange = Sim.makeSquare  size   (size +1)   (Util.createNode   0 1 0)
         #yOrange = Sim.makeSquare  (size+1)   size  (Util.createNode   0 1 0)
-        #zBlue  = Sim.makeSquare  size   size   (Util.createNode   0 1 0)
-        #result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 5000  {zField  : [], xField : [],  yField : []}        
+        #zBlue  = Sim.makeSquare  size   size   (Util.createNode   0 1 0.1)
+        #result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 1000  {zField  : [], xField : [],  yField : []}        
         # 2D simulation 2
-        xOrange = Sim.makeSquare  size   (size + 1)   (Util.createNodeAni   0 1 0.1 0.1 0.1)
-        yOrange = Sim.makeSquare  (size + 1)   size   (Util.createNodeAni   0 1 0.1 0.1 0.1)
-        zBlue  = Sim.makeSquare  size   size   (Util.createNodeAni   0 1 0 0 0)
+        xOrange = Sim.makeSquare  size   (size + 1)   (Util.createNodeAni   0 1 0 0 0)
+        yOrange = Sim.makeSquare  (size + 1)   size   (Util.createNodeAni   0 1 0 0 0)
+        zBlue  = Sim.makeSquare  size   size   (Util.createNodeAni   0 1 0.1 0.1 0.1)
         
         result = Sim.xyVariationSim2  xOrange yOrange zBlue forceSq2 1000 {zField  : [], xField : [],  yField : []}
         

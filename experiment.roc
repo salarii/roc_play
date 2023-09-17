@@ -24,12 +24,12 @@ force = \ list, deltaT, cnt ->
 
 
 forceSq = \ sq, deltaT, cnt ->
-    Sim.modifyFieldSq  sq  9 9   (Util.createNode  1 1 0)
+    Sim.modifyFieldSq  sq  2 2   (Util.createNode  1 1 0)
 
 forceSq2 = \ sq, deltaT, cnt ->
     Sim.modifyFieldSq  sq  9 9  (Util.createNodeAni  1 1 0 0 0)
 
-
+    
 forceCube = \ cubeX1, cubeY1, cubeZ1, cubeX2, cubeY2, cubeZ2, deltaT, cnt ->
     modifZ1  = Sim.modifyFieldCube  cubeZ1  1 1 1  (Util.createNode  1 1 0)
     {xField1 : cubeX1,  yField1 : cubeY1, zField1  : modifZ1, xField2 : cubeX2,  yField2 : cubeY2, zField2  : cubeZ2 } 
@@ -53,14 +53,14 @@ main =
     #line  simulation
     #orange = List.repeat (Util.createNode   0 1 0) 20
     #blue =  List.repeat (Util.createNode   0 1  0) 21
-    #size  = 20
+    size  = 4
     
     # square simeulation
-    #xOrange = Sim.makeSquare  size   (size + 1)   (Util.createNode   0 1 0)
-    #yOrange = Sim.makeSquare  (size + 1)   size   (Util.createNode   0 1 0)
-    #zBlue  = Sim.makeSquare  size   size   (Util.createNode   0 1 0)
+    xOrange = Sim.makeSquare  size   (size + 1)   (Util.createNode   0 1 1000000)
+    yOrange = Sim.makeSquare  (size + 1)   size   (Util.createNode   0 1 1000000)
+    zBlue  = Sim.makeSquare  size   size   (Util.createNode   0 1 0)
     
-    #result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 5  {zField  : [], xField : [],  yField : []}
+    result = Sim.xyVariationSim  xOrange yOrange zBlue forceSq 4  {zField  : [], xField : [],  yField : []}
     #result =  Sim.testFun zBlue forceSq
     #Stdout.line ( Sim.makeStringSq result getRelevant  "\n" )
     #Stdout.line ( Sim.makeStringCube result.zField getRelevant  {y:"\n",z:"\n"} )
@@ -68,16 +68,16 @@ main =
     #Stdout.line ( Sim.makeStringCube result.yField getRelevant  {y:"\n",z:"\n"} )
     
     # square simulation 2
-    size  = 20
-    xOrange = Sim.makeSquare  size   (size + 1)   (Util.createNodeAni   0 1 10 10 10)
-    yOrange = Sim.makeSquare  (size + 1)   size   (Util.createNodeAni   0 1 10 10 10)
-    zBlue  = Sim.makeSquare  size   size   (Util.createNodeAni   0 1 0 0 0)
+    #size  = 20
+    #xOrange = Sim.makeSquare  size   (size + 1)   (Util.createNodeAni   0 1 10 10 10)
+    #yOrange = Sim.makeSquare  (size + 1)   size   (Util.createNodeAni   0 1 10 10 10)
+    #zBlue  = Sim.makeSquare  size   size   (Util.createNodeAni   0 1 0 0 0)
     
-    result = Sim.xyVariationSim2  xOrange yOrange zBlue forceSq2 10 {zField  : [], xField : [],  yField : []}
+    #result = Sim.xyVariationSim2  xOrange yOrange zBlue forceSq2 10 {zField  : [], xField : [],  yField : []}
     #result =  Sim.testFun zBlue forceSq
     #Stdout.line ( Sim.makeStringSq result getRelevant  "\n" )
-    Stdout.line ( Sim.makeStringCube result.zField getRelevant  {y:"\n",z:"\n"} )
-    #Stdout.line ( Sim.makeStringCube result.xField getRelevant  {y:"\n",z:"\n"} )
+    #Stdout.line ( Sim.makeStringCube result.zField getRelevant  {y:"\n",z:"\n"} )
+    Stdout.line ( Sim.makeStringCube result.xField getRelevant  {y:"\n",z:"\n"} )
     #Stdout.line ( Sim.makeStringCube result.yField getRelevant  {y:"\n",z:"\n"} )
     
     
