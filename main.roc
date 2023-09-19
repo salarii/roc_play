@@ -29,12 +29,12 @@ forceSq = \ sq, deltaT, cnt ->
     Sim.modifyFieldSq  sq  9  9   (Util.createNode  1 1 0)
 
 forceSq2 = \ sq, deltaT, cnt ->
-    Sim.modifyFieldSq sq 9 9  (Util.createNodeAni  1 1 0 0 0)
+    Sim.modifyFieldSq sq 24 24  (Util.createNodeAni  (Num.sin ((3.14/(3.0/deltaT) ) * ( Num.toF32  cnt ))) 1 0 0 0)
 
 
     
 getRelevant = \ elem ->
-    elem.value
+    Num.toStr elem.value
     
 main =
     task =
@@ -48,7 +48,7 @@ main =
         zFieldPath = Path.fromStr "zField.txt"
         xFieldPath = Path.fromStr "xField.txt"
         yFieldPath = Path.fromStr "yField.txt"
-        size  = 20
+        size  = 50
         # 2D simulation
         #xOrange = Sim.makeSquare  size   (size +1)   (Util.createNode   0 1 0)
         #yOrange = Sim.makeSquare  (size+1)   size  (Util.createNode   0 1 0)
@@ -57,11 +57,14 @@ main =
         # 2D simulation 2
         xOrange = Sim.makeSquare  size   (size + 1)   (Util.createNodeAni   0 1 0 0 0)
         yOrange = Sim.makeSquare  (size + 1)   size   (Util.createNodeAni   0 1 0 0 0)
-        zBlue  = Sim.makeSquare  size   size   (Util.createNodeAni   0 1 0.1 0.1 0.1)
+        zBlue  = Sim.makeSquare  size   size   (Util.createNodeAni   0 1 0 0 0)
         
-        result = Sim.xyVariationSim2  xOrange yOrange zBlue forceSq2 1000 {zField  : [], xField : [],  yField : []}
+        xOrangePml = Sim.pmlIzeSq xOrange 10  1 1
+        yOrangePml = Sim.pmlIzeSq yOrange 10  1 1
+        zBluePml = Sim.pmlIzeSq zBlue 10  1 1
         
-            
+        result = Sim.xyVariationSim2  {deltaSpace : 1, deltaT : 0.1}  xOrangePml yOrangePml zBluePml forceSq2 2000 {zField  : [], xField : [],  yField : []}
+      
 
         zlog = ( Sim.makeStringCube result.zField getRelevant  {y:"\n",z:""} )
         xlog = ( Sim.makeStringCube result.xField getRelevant  {y:"\n",z:""} )

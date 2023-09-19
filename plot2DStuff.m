@@ -1,4 +1,4 @@
-CollParam = 20
+CollParam = 50
 
 Z = load( "zField.txt" )';
 X = load( "xField.txt" )';
@@ -25,7 +25,7 @@ z = zeros(RowParam,CollParam);
  hold off;
  title ("quiver3 ");
 
- p = 20
+ p = 3
  for  j = 1:pagesCnt/p
  #h = quiver3 (xx, yy, z, 0, 0.01, Zreshaped(:,:,j), 'AutoScale','off',...
   #          'MaxHeadSize',0.1,
