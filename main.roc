@@ -29,7 +29,7 @@ forceSq = \ sq, deltaT, cnt ->
     Sim.modifyFieldSq  sq  9  9   (Util.createNode  1 1 0)
 
 forceSq2 = \ sq, deltaT, cnt ->
-    Sim.modifyFieldSq sq 24 24  (Util.createNodeAni  (Num.sin ((3.14/(3.0/deltaT) ) * ( Num.toF32  cnt ))) 1 0 0 0)
+    Sim.modifyFieldSq sq 39 39  (Util.createNodeAni  (Num.sin ((3.14/(3.0/deltaT) ) * ( Num.toF32  cnt ))) 1 0 0 0)
 
 
     
@@ -48,7 +48,7 @@ main =
         zFieldPath = Path.fromStr "zField.txt"
         xFieldPath = Path.fromStr "xField.txt"
         yFieldPath = Path.fromStr "yField.txt"
-        size  = 50
+        size  = 80
         # 2D simulation
         #xOrange = Sim.makeSquare  size   (size +1)   (Util.createNode   0 1 0)
         #yOrange = Sim.makeSquare  (size+1)   size  (Util.createNode   0 1 0)

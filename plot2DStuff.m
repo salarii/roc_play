@@ -1,4 +1,4 @@
-CollParam = 50
+CollParam = 80
 
 Z = load( "zField.txt" )';
 X = load( "xField.txt" )';
