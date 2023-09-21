@@ -13,7 +13,7 @@ validateSplit = \ result ->
         Err _ -> { before: "", after: "" }
 
 prepareTokens = \ str, tokens ->
-    dest = Str.trimLeft str
+    dest = Str.trim str
     when dest is 
         "" -> tokens
         _ -> 
@@ -88,7 +88,7 @@ appendIfNeeded = \ activities, token ->
 
 setupEnv = \ str  -> 
     settings = { currSetting : [], accepted : [] }
-    prepareTokens (validate  (Str.replaceEach  str "\n" " " ) )  []
+    prepareTokens (Str.replaceEach  str "\n" " " )  []
     |> ( \ tokens -> createActivities settings tokens  )
 
 
@@ -144,7 +144,7 @@ readCubeFromTokens = \ tokens, cubex, cubexy, cube  ->
 
 
 readCube = \ str -> 
-    Parsing.prepareTokens    (validate  (Str.replaceEach  str "\n" " " ) )   [] 
+    Parsing.prepareTokens    (Str.replaceEach  str "\n" " "  )   [] 
     |> readCubeFromTokens [] [] []
             
 createSquare = \ nodes, orange, blue -> 

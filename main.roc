@@ -1,19 +1,26 @@
 app "sym"
-    packages { pf: "https://github.com/roc-lang/basic-cli/releases/download/0.3.1/97mY3sUwo433-pcnEQUlMhn-sWiIf_J9bPhcAFZoqY4.tar.br" }
+    packages { pf: "https://github.com/roc-lang/basic-cli/releases/download/0.5.0/Cufzl36_SnJ4QbOoEmiJ5dIpUxBvdB3NEySvuH82Wio.tar.br" }
     imports [
-        pf.Process,
         pf.Stdout,
         pf.Stderr,
         pf.Task.{ Task },
         pf.File,
         pf.Path,
         pf.Env,
+        pf.InternalTask, 
+        pf.Effect,
         Squares,
         Sim,
         Util,
-        pf.Dir
-        ]
+        pf.Dir]
     provides [main] to pf
+ 
+exit : U8 -> Task {} *
+exit = \code ->
+    Effect.processExit code
+    |> Effect.map \_ -> Ok {}
+    |> InternalTask.fromEffect
+ 
  
 steps  =4000
 runWorld  = \ iter, worldIn ->
@@ -63,7 +70,7 @@ main =
         yOrangePml = Sim.pmlIzeSq yOrange 10  1 1
         zBluePml = Sim.pmlIzeSq zBlue 10  1 1
         
-        result = Sim.xyVariationSim2  {deltaSpace : 1, deltaT : 0.1}  xOrangePml yOrangePml zBluePml forceSq2 2000 {zField  : [], xField : [],  yField : []}
+        result = Sim.xyVariationSim2  {deltaSpace : 1, deltaT : 0.1}  xOrangePml yOrangePml zBluePml forceSq2 200 {zField  : [], xField : [],  yField : []}
       
 
         zlog = ( Sim.makeStringCube result.zField getRelevant  {y:"\n",z:""} )
@@ -88,4 +95,4 @@ main =
                         _ -> "Uh oh, there was an error!"
 
                 {} <- Stderr.line msg |> Task.await
-                Process.exit 1
+                exit 1

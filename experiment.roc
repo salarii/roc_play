@@ -1,22 +1,18 @@
-        app "exp"
-    packages { pf: "https://github.com/roc-lang/basic-cli/releases/download/0.3.1/97mY3sUwo433-pcnEQUlMhn-sWiIf_J9bPhcAFZoqY4.tar.br" }
-    imports [pf.Stdout, Parsing, Sim, Util] 
+    app "exp"
+
+    packages { pf: "https://github.com/roc-lang/basic-cli/releases/download/0.5.0/Cufzl36_SnJ4QbOoEmiJ5dIpUxBvdB3NEySvuH82Wio.tar.br" }
+    imports [pf.Stdout, Parsing, Sim, Util]
     provides [main] to pf
 
 
-createGold = \ gold, cnt ->   
-    elem = List.repeat gold   (Num.round (Util.getFromList cnt 1  0.0f32) )
-    List.repeat  elem  (Num.round(Util.getFromList cnt 0 0.0f32 ))
-
-
-serviceConfig = \ created, config ->
-    if Parsing.checkIfPresent  config  (Set.fromList [Gold, Nodes ]) == Bool.true then
-        goldConf = Parsing.getTagFromConfig Gold config 
-        nodeConf = Parsing.getTagFromConfig Nodes config
-        value = Util.getFromList goldConf.vals  0  0.0f32 
-        createGold value nodeConf.vals 
-    else
-        created
+#serviceConfig = \ created, config ->
+#    if Parsing.checkIfPresent  config  (Set.fromList [Gold, Nodes ]) == Bool.true then
+#        goldConf = Parsing.getTagFromConfig Gold config 
+#        nodeConf = Parsing.getTagFromConfig Nodes config
+#        value = Util.getFromList goldConf.vals  0  0.0f32 
+#        createGold value nodeConf.vals 
+#    else
+#        created
 
 
 force = \ list, deltaT, cnt ->
@@ -44,8 +40,8 @@ getOmega = \ elem ->
     |> Str.concat ","
     |> Str.concat (Num.toStr elem.omega.z)
     
-createWorld = \ configList -> 
-    List.walk  configList  []  serviceConfig
+#createWorld = \ configList -> 
+#    List.walk  configList  []  serviceConfig
 
 test  = \ clad,  mad ->
     mad clad
@@ -103,12 +99,12 @@ main =
     yBlue = Sim.makeCube size (size + 1) size (Util.createNode   0 1 0)
     zBlue = Sim.makeCube size size (size + 1) (Util.createNode   0 1 0)
 
-    xModif= Sim.modifyFieldCube  zBlue 2 2 2 (Util.createNode   1 1 0)
+#    xModif= Sim.modifyFieldCube  zBlue 2 2 2 (Util.createNode   1 1 0)
 
     #result =  Sim.cubeElemOperation  xModif zBlue Sim.minusElemOp
     #Stdout.line ( Sim.makeStringCube result getRelevant  {y:"\n",z:"\n"} ) 
     
     result = Sim.xyzVariationSim  {deltaSpace : 1, deltaT : 0.1} xOrange yOrange zOrange xBlue yBlue zBlue  forceCube 2  {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
-    Stdout.line ( printCubes   result.zField2)   
+    Stdout.line ( printCubes   result.zField2)
     
     

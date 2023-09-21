@@ -1,6 +1,5 @@
-# y in  roc ->  columns 
-
-CollParam = 80
+CollParam = 4
+StackSize = 4
 
 Z = load( "zField.txt" )';
 X = load( "xField.txt" )';
@@ -9,7 +8,7 @@ Matrix = Z;
 RowParam = size( Matrix, 1);
 pagesCnt = size( Matrix, 2)/CollParam;
 
-Zreshaped = permute(reshape (Matrix, RowParam, CollParam,pagesCnt),[1,2,3]);
+Zreshaped = permute(reshape (Matrix, RowParam, CollParam, pagesCnt),[1,2,3]);
 
  clf;
  colormap ("default");
