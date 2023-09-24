@@ -1,6 +1,6 @@
 interface Sim
-    exposes [modifyFieldCube, modifyFieldSq, calculateSolution, makeCube, makeSquare, makeStringCube, xyVariationSim2, xyzVariationSim2
-            ,makeStringSq, sliceCube, check, sphere, setShape, lineMotion, xyVariationSim, xyzVariationSim, pmlIzeSq, opDerivXCube, opDerivYCube,opDerivZCube, cubeElemOperation,  minusElemOp ]
+    exposes [modifyFieldCube, modifyFieldSq, calculateSolution, makeCube, makeSquare, xyVariationSim2, xyzVariationSim2
+            , sliceCube, check, sphere, setShape, lineMotion, xyVariationSim, xyzVariationSim, pmlIzeSq, opDerivXCube, opDerivYCube,opDerivZCube, cubeElemOperation,  minusElemOp ]
     imports [Util]
 
 
@@ -58,14 +58,7 @@ makeCubeRec = \ x, y, z, val ,list  ->
         makeCubeRec  x y  (z - 1) val (List.append list (makeSquare x y val ) )
 
 
-makeStringCube = \ cube, getRelevant, separator-> 
-    List.walk cube  ""  ( \ str, sq  ->  Str.concat str (Str.concat ( makeStringSq sq getRelevant separator.y ) separator.z ) )
-     
-makeStringSq =  \ square, getRelevant,separator -> 
-    List.walk square  "" (\ str, list ->
-                            List.walk list str (\strIn, val -> Str.concat (Str.concat strIn  " ") (  getRelevant val ) )
-                            |> Str.concat  separator )
-    
+
 getFeldSq  = \ sq, x, y, def ->
     Util.getListFromList sq  0
     |> Util.getFromList  x  def

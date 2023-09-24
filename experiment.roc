@@ -14,7 +14,6 @@
 #    else
 #        created
 
-
 force = \ list, deltaT, cnt ->
     (List.replace  list  10  (Util.createNode   1 1 0)).list
 
@@ -27,11 +26,10 @@ forceSq2 = \ sq, deltaT, cnt ->
 
     
 forceCube = \ cubeX1, cubeY1, cubeZ1, cubeX2, cubeY2, cubeZ2, deltaT, cnt ->
-    modifZ2  = Sim.modifyFieldCube  cubeZ2  2 2 2  (Util.createNode  1 1 0)
+    modifZ2  = Sim.modifyFieldCube  cubeZ2  1 1 1  (Util.createNode  1 1 0)
     {xField1 : cubeX1,  yField1 : cubeY1, zField1  : cubeZ1, xField2 : cubeX2,  yField2 : cubeY2, zField2  : modifZ2 } 
 
-getRelevant = \ elem ->
-    Num.toStr elem.value
+
 
 getOmega = \ elem ->
     Num.toStr elem.omega.x 
@@ -90,7 +88,7 @@ main =
     
     
     # cube  simulation
-    size  = 6
+    size  = 3
     xOrange = Sim.makeCube size (size + 1) (size + 1) (Util.createNode   0 1 0)
     yOrange = Sim.makeCube (size + 1) size (size + 1) (Util.createNode   0 1 0)
     zOrange = Sim.makeCube (size + 1) (size + 1) size (Util.createNode   0 1 0)
