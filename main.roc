@@ -107,7 +107,7 @@ main =
         _ <- File.writeUtf8 xField2Path xF2log |> Task.await
         _ <- File.writeUtf8 yField2Path yF2log |> Task.await
         _ <- File.writeUtf8 zField2Path zF2log |> Task.await          
-        Stdout.line (Util.printCubes  result.xField1  {y:"\n",z:"\n"})
+        Stdout.line (Util.printCubes  result.zField2  {y:"\n",z:"\n"})
         
 
     Task.attempt task \result ->

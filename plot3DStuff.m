@@ -1,10 +1,11 @@
 
 mainSize  = 3
 
-Print = "X1";  %  X1 Y1 Z1 X2 Y2 Z2
-dim  =  2;
+Pick = "Z2";  %  X1 Y1 Z1 X2 Y2 Z2
+Print = "Z";  %  X Y Z
+dim  =  1;
   
-data = prepare3DStuff(Print, dim, mainSize);
+data = prepare3DStuff(Pick, Print, dim, mainSize);
  
  
  clf;
@@ -26,7 +27,7 @@ pgCnt =  size(data.reshaped,3);
     hold on 
     f2 = figure (2);
     mesh (data.xx, data.yy, data.reshaped(:,:,j*p),"EdgeColor", "b");
-    axis ([0 size(x,2)  0 size(y,2) -1 1])
+    axis ([0 size(data.xx,2)  0 size(data.yy,1) -1 1])
     
     set(gca, "linewidth", 20, "fontsize", 40)
     grid on 
