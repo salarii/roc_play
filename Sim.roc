@@ -600,52 +600,56 @@ xyzVariationSim2Internal = \ params, xDirectionAuxField1, yDirectionAuxField1, z
         xDirectionField1PlusDeltaT =
             cubeElemOperation xDirectionAuxField1PlusDeltaT xDirectionAuxField1 
                 (\ auxPlusDelta, aux -> { aux & value : (auxDalculateSumModifAni aux.param aux.omega.x aux.omega.z deltaT ) * auxPlusDelta.value - (auxDalculateSubModifAni  aux.param aux.omega.x aux.omega.z deltaT ) * aux.value })
-            |> cubeElemOperation modified.xField1  (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.z deltaT) + aux.value })
+            |> cubeElemOperation modified.xField1  (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.z deltaT)* field.value  + aux.value })
 
         yDirectionField1PlusDeltaT = 
             cubeElemOperation yDirectionAuxField1PlusDeltaT yDirectionAuxField1
                 (\ auxPlusDelta, aux -> { aux & value : (auxDalculateSumModifAni aux.param aux.omega.y aux.omega.x deltaT ) * auxPlusDelta.value - (auxDalculateSubModifAni  aux.param aux.omega.y aux.omega.x deltaT ) * aux.value})
-            |> cubeElemOperation modified.yField1 (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.x deltaT) + aux.value })
+            |> cubeElemOperation modified.yField1 (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.x deltaT)* field.value  + aux.value })
 
         zDirectionField1PlusDeltaT = 
             cubeElemOperation zDirectionAuxField1PlusDeltaT zDirectionAuxField1
-                (\ auxPlusDelta, aux -> { aux & value : (auxDalculateSumModifAni aux.param aux.omega.z aux.omega.y deltaT ) - (auxDalculateSubModifAni  aux.param aux.omega.z aux.omega.y deltaT ) })
-            |> cubeElemOperation modified.zField1 (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.y deltaT) + aux.value })
+                (\ auxPlusDelta, aux -> { aux & value : (auxDalculateSumModifAni aux.param aux.omega.z aux.omega.y deltaT ) * auxPlusDelta.value - (auxDalculateSubModifAni  aux.param aux.omega.z aux.omega.y deltaT ) * aux.value})
+            |> cubeElemOperation modified.zField1 (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.y deltaT)* field.value  + aux.value })
 
         xDirectionAuxField2PlusDeltaT =
-            (opDerivYCube (addFirstBackCubeY zDirectionField1PlusDeltaT edges.minus edges.plus) deltaXY edges deriv1ElemOp )
-            |> removeFirstCubeY 
-            |> cubeElemOperation (removeFirstCubeZ (opDerivZCube  (addFirstBackCubeZ yDirectionField1PlusDeltaT edges.minus edges.plus) deltaXY edges deriv1ElemOp)) minusElemOp
-            |> cubeElemOperation xDirectionAuxField2  (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.y deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.y deltaT ) * elemMod.value }  )
+            (opDerivZCube yDirectionField1PlusDeltaT deltaXY edges deriv1ElemOp)
+            |> removeFirstCubeZ 
+            |> cubeElemOperation (removeFirstCubeY (opDerivYCube zDirectionField1PlusDeltaT deltaXY edges deriv1ElemOp)) minusElemOp
+            |> cubeElemOperation xDirectionAuxField2 (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.y deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.y deltaT ) * elemMod.value }  )
 
         yDirectionAuxField2PlusDeltaT = 
-            (opDerivZCube  (addFirstBackCubeZ xDirectionField1PlusDeltaT edges.minus edges.plus) deltaXY edges deriv1ElemOp)
-            |> removeFirstCubeZ
-            |> cubeElemOperation (removeFirstCubeX (opDerivXCube  (addFirstBackCubeX zDirectionField1PlusDeltaT edges.minus edges.plus) deltaXY edges deriv1ElemOp)) minusElemOp
-            |> cubeElemOperation yDirectionAuxField2  (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.z deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.z deltaT ) * elemMod.value }  )
+            (opDerivXCube zDirectionField1PlusDeltaT deltaXY edges deriv1ElemOp)
+            |> removeFirstCubeX
+            |> cubeElemOperation (removeFirstCubeZ (opDerivZCube xDirectionField1PlusDeltaT deltaXY edges deriv1ElemOp)) minusElemOp
+            |> cubeElemOperation yDirectionAuxField2 (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.z deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.z deltaT ) * elemMod.value }  )
 
         zDirectionAuxField2PlusDeltaT = 
-            (opDerivXCube (addFirstBackCubeX yDirectionField1PlusDeltaT edges.minus edges.plus) deltaXY edges deriv1ElemOp )
-            |> removeFirstCubeX
-            |> cubeElemOperation (removeFirstCubeY (opDerivYCube   (addFirstBackCubeY xDirectionField1PlusDeltaT edges.minus edges.plus) deltaXY edges deriv1ElemOp)) minusElemOp
+            (opDerivYCube xDirectionField1PlusDeltaT deltaXY edges deriv1ElemOp)
+            |> removeFirstCubeY
+            |> cubeElemOperation (removeFirstCubeX (opDerivXCube yDirectionField1PlusDeltaT deltaXY edges deriv1ElemOp)) minusElemOp
             |> cubeElemOperation zDirectionAuxField2 (\ elemMod, elemSelf  ->  { elemSelf & value : ( calculateFieldModifAni elemSelf.param elemSelf.omega.x deltaT )*elemSelf.value + (calculateDivModifAni elemSelf.param elemSelf.omega.x deltaT ) * elemMod.value }  )
 
         xDirectionField2PlusDeltaT =
             cubeElemOperation xDirectionAuxField2PlusDeltaT xDirectionAuxField2 
-                (\ auxPlusDelta, aux -> { aux & value : (auxDalculateSumModifAni aux.param aux.omega.x aux.omega.z deltaT ) - (auxDalculateSubModifAni  aux.param aux.omega.x aux.omega.z deltaT ) })
-            |> cubeElemOperation modified.xField2 (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.z deltaT) + aux.value })
+                (\ auxPlusDelta, aux -> { aux & value : (auxDalculateSumModifAni aux.param aux.omega.x aux.omega.z deltaT ) * auxPlusDelta.value - (auxDalculateSubModifAni  aux.param aux.omega.x aux.omega.z deltaT ) * aux.value })
+            |> cubeElemOperation modified.xField2 (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.z deltaT)* field.value  + aux.value })
 
         yDirectionField2PlusDeltaT = 
             cubeElemOperation yDirectionAuxField2PlusDeltaT yDirectionAuxField2
-                (\ auxPlusDelta, aux -> { aux & value : (auxDalculateSumModifAni aux.param aux.omega.y aux.omega.x deltaT ) - (auxDalculateSubModifAni  aux.param aux.omega.y aux.omega.x deltaT ) })
-            |> cubeElemOperation modified.yField2 (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.x deltaT) + aux.value })
+                (\ auxPlusDelta, aux -> { aux & value : (auxDalculateSumModifAni aux.param aux.omega.y aux.omega.x deltaT ) * auxPlusDelta.value - (auxDalculateSubModifAni  aux.param aux.omega.y aux.omega.x deltaT ) * aux.value })
+            |> cubeElemOperation modified.yField2 (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.x deltaT)* field.value  + aux.value })
 
         zDirectionField2PlusDeltaT = 
             cubeElemOperation zDirectionAuxField2PlusDeltaT zDirectionAuxField2
-                (\ auxPlusDelta, aux -> { aux & value : (auxDalculateSumModifAni aux.param aux.omega.z aux.omega.y deltaT ) - (auxDalculateSubModifAni  aux.param aux.omega.z aux.omega.y deltaT ) })
-            |> cubeElemOperation modified.zField2 (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.y deltaT) + aux.value })
+                (\ auxPlusDelta, aux -> { aux & value : (auxDalculateSumModifAni aux.param aux.omega.z aux.omega.y deltaT ) * auxPlusDelta.value - (auxDalculateSubModifAni  aux.param aux.omega.z aux.omega.y deltaT ) * aux.value })
+            |> cubeElemOperation modified.zField2 (\ aux, field -> { field & value : (calculateFieldModifAni field.param field.omega.y deltaT)* field.value  + aux.value })
 
-        xyzVariationSim2Internal params xDirectionAuxField1PlusDeltaT yDirectionAuxField1PlusDeltaT zDirectionAuxField1PlusDeltaT xDirectionField1PlusDeltaT yDirectionField1PlusDeltaT zDirectionField1PlusDeltaT   xDirectionAuxField2PlusDeltaT yDirectionAuxField2PlusDeltaT zDirectionAuxField2PlusDeltaT xDirectionField2PlusDeltaT yDirectionField2PlusDeltaT zDirectionField2PlusDeltaT force (cnt - 1)  { out & xField1 : List.append out.xField1  yDirectionField1PlusDeltaT,  yField1 : List.append out.yField1  yDirectionField1PlusDeltaT, zField1 : List.append out.zField1  zDirectionField1PlusDeltaT, xField2 : List.append out.xField2  xDirectionField2PlusDeltaT,  yField2 : List.append out.yField2  yDirectionField2PlusDeltaT, zField2  : List.append out.zField2 zDirectionField2PlusDeltaT } 
+
+        test =
+            zDirectionAuxField2PlusDeltaT
+
+        xyzVariationSim2Internal params xDirectionAuxField1PlusDeltaT yDirectionAuxField1PlusDeltaT zDirectionAuxField1PlusDeltaT xDirectionField1PlusDeltaT yDirectionField1PlusDeltaT zDirectionField1PlusDeltaT   xDirectionAuxField2PlusDeltaT yDirectionAuxField2PlusDeltaT zDirectionAuxField2PlusDeltaT xDirectionField2PlusDeltaT yDirectionField2PlusDeltaT zDirectionField2PlusDeltaT force (cnt - 1)  { out & xField1 : List.append out.xField1  test,  yField1 : List.append out.yField1  yDirectionField1PlusDeltaT, zField1 : List.append out.zField1  zDirectionField1PlusDeltaT, xField2 : List.append out.xField2  xDirectionField2PlusDeltaT,  yField2 : List.append out.yField2  yDirectionField2PlusDeltaT, zField2  : List.append out.zField2 zDirectionField2PlusDeltaT } 
       
       
 xyzVariationSim2 = \ params, xDirectionField1, yDirectionField1, zDirectionField1, xDirectionField2, yDirectionField2, zDirectionField2,  force, cnt, out  -> 

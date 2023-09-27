@@ -31,6 +31,9 @@ forceCube = \ cubeX1, cubeY1, cubeZ1, cubeX2, cubeY2, cubeZ2, deltaT, cnt ->
     modifZ2  = Sim.modifyFieldCube  cubeZ2  1 1 1  (Util.createNode  1 1 0)
     {xField1 : cubeX1,  yField1 : cubeY1, zField1  : cubeZ1, xField2 : cubeX2,  yField2 : cubeY2, zField2  : modifZ2 } 
 
+forceCube2 = \ cubeX1, cubeY1, cubeZ1, cubeX2, cubeY2, cubeZ2, deltaT, cnt ->
+    modifZ2  = Sim.modifyFieldCube  cubeZ2  1 1 1   (Util.createNodeAni  1 1 0 0 0)
+    {xField1 : cubeX1,  yField1 : cubeY1, zField1  : cubeZ1, xField2 : cubeX2,  yField2 : cubeY2, zField2  : modifZ2 } 
 
     
 
@@ -82,18 +85,45 @@ main =
         yField2Path = Path.fromStr "yField2.txt"
         zField2Path = Path.fromStr "zField2.txt"
                 
-        size  = 3
-        xOrange = Sim.makeCube size (size + 1) (size + 1) (Util.createNode   0 1 0)
-        yOrange = Sim.makeCube (size + 1) size (size + 1) (Util.createNode   0 1 0)
-        zOrange = Sim.makeCube (size + 1) (size + 1) size (Util.createNode   0 1 0)
+        #size  = 3
+        #xOrange = Sim.makeCube size (size + 1) (size + 1) (Util.createNode   0 1 0)
+        #yOrange = Sim.makeCube (size + 1) size (size + 1) (Util.createNode   0 1 0)
+        #zOrange = Sim.makeCube (size + 1) (size + 1) size (Util.createNode   0 1 0)
         
-        xBlue = Sim.makeCube (size +1 ) size size (Util.createNode   0 1 0)
-        yBlue = Sim.makeCube size (size + 1) size (Util.createNode   0 1 0)
-        zBlue = Sim.makeCube size size (size + 1) (Util.createNode   0 1 0)
+        #xBlue = Sim.makeCube (size +1 ) size size (Util.createNode   0 1 0)
+        #yBlue = Sim.makeCube size (size + 1) size (Util.createNode   0 1 0)
+        #zBlue = Sim.makeCube size size (size + 1) (Util.createNode   0 1 0)
 
-        result = Sim.xyzVariationSim  {deltaSpace : 1, deltaT : 0.1} xOrange yOrange zOrange xBlue yBlue zBlue forceCube 2 {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
+        #result = Sim.xyzVariationSim  {deltaSpace : 1, deltaT : 0.1} xOrange yOrange zOrange xBlue yBlue zBlue forceCube 2 {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
     
 
+        #xF1log = (Util.printCubes  result.xField1  {y:"\n",z:""})
+        #yF1log = (Util.printCubes  result.yField1  {y:"\n",z:""})
+        #zF1log = (Util.printCubes  result.zField1  {y:"\n",z:""})
+        #xF2log = (Util.printCubes  result.xField2  {y:"\n",z:""})
+        #yF2log = (Util.printCubes  result.yField2  {y:"\n",z:""})
+        #zF2log = (Util.printCubes  result.zField2  {y:"\n",z:""})  
+
+        #_ <- File.writeUtf8 xField1Path xF1log |> Task.await
+        #_ <- File.writeUtf8 yField1Path yF1log |> Task.await
+        #_ <- File.writeUtf8 zField1Path zF1log |> Task.await        
+        #_ <- File.writeUtf8 xField2Path xF2log |> Task.await
+        #_ <- File.writeUtf8 yField2Path yF2log |> Task.await
+        #_ <- File.writeUtf8 zField2Path zF2log |> Task.await          
+        #Stdout.line (Util.printCubes  result.zField2  {y:"\n",z:"\n"})
+        
+        #  3D  simulation  2
+        size  = 3
+        xOrange = Sim.makeCube size (size + 1) (size + 1) (Util.createNodeAni   0 1 0 0 0)
+        yOrange = Sim.makeCube (size + 1) size (size + 1) (Util.createNodeAni   0 1 0 0 0)
+        zOrange = Sim.makeCube (size + 1) (size + 1) size (Util.createNodeAni   0 1 0 0 0)
+        
+        xBlue = Sim.makeCube (size +1 ) size size (Util.createNodeAni   0 1 0 0 0)
+        yBlue = Sim.makeCube size (size + 1) size (Util.createNodeAni   0 1 0 0 0)
+        zBlue = Sim.makeCube size size (size + 1) (Util.createNodeAni   0 1 0 0 0)
+
+        result = Sim.xyzVariationSim2  {deltaSpace : 1, deltaT : 0.1} xOrange yOrange zOrange xBlue yBlue zBlue forceCube2 2 {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
+    
         xF1log = (Util.printCubes  result.xField1  {y:"\n",z:""})
         yF1log = (Util.printCubes  result.yField1  {y:"\n",z:""})
         zF1log = (Util.printCubes  result.zField1  {y:"\n",z:""})
@@ -107,9 +137,8 @@ main =
         _ <- File.writeUtf8 xField2Path xF2log |> Task.await
         _ <- File.writeUtf8 yField2Path yF2log |> Task.await
         _ <- File.writeUtf8 zField2Path zF2log |> Task.await          
-        Stdout.line (Util.printCubes  result.zField2  {y:"\n",z:"\n"})
+        Stdout.line (Util.printCubes  result.xField1  {y:"\n",z:"\n"})
         
-
     Task.attempt task \result ->
         when result is
             Ok {} -> Stdout.line "Successfully wrote a string to out.txt"
