@@ -122,7 +122,7 @@ main =
         yBlue = Sim.makeCube size (size + 1) size (Util.createNodeAni   0 1 0 0 0)
         zBlue = Sim.makeCube size size (size + 1) (Util.createNodeAni   0 1 0 0 0)
 
-        result = Sim.xyzVariationSim2  {deltaSpace : 1, deltaT : 0.1} xOrange yOrange zOrange xBlue yBlue zBlue forceCube2 2 {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
+        result = Sim.xyzVariationSim2  {deltaSpace : 1, deltaT : 0.1} xOrange yOrange zOrange xBlue yBlue zBlue forceCube2 1000 {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
     
         xF1log = (Util.printCubes  result.xField1  {y:"\n",z:""})
         yF1log = (Util.printCubes  result.yField1  {y:"\n",z:""})
@@ -137,7 +137,7 @@ main =
         _ <- File.writeUtf8 xField2Path xF2log |> Task.await
         _ <- File.writeUtf8 yField2Path yF2log |> Task.await
         _ <- File.writeUtf8 zField2Path zF2log |> Task.await          
-        Stdout.line (Util.printCubes  result.xField1  {y:"\n",z:"\n"})
+        Stdout.line (Util.printCubes  result.yField2  {y:"\n",z:"\n"})
         
     Task.attempt task \result ->
         when result is

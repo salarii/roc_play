@@ -32,12 +32,12 @@ endif
 
 colCnt = size( Matrix, 1);
 pgCnt = size( Matrix, 2)/(rowCnt*stackCnt);
-Matrix = permute( reshape(Matrix,colCnt,rowCnt,stackCnt,pgCnt),[2,1,3,4])
+Matrix = permute( reshape(Matrix,colCnt,rowCnt,stackCnt,pgCnt),[2,1,3,4]);
 
 if (Print == "X"   )
   reshaped = reshape( Matrix(:,dim,:, : ), rowCnt, stackCnt, pgCnt);
-  x = linspace (1, rowCnt,rowCnt);
-  y = linspace (1, stackCnt, stackCnt  );
+  x = linspace (1, stackCnt, stackCnt);
+  y = linspace (1, rowCnt, rowCnt);
   z = zeros(stackCnt, rowCnt);
 elseif (Print == "Y" ) 
   reshaped = permute(reshape( Matrix(dim,:,:, : ), colCnt, stackCnt,pgCnt),[2,1,3]);
