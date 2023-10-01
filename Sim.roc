@@ -1,6 +1,6 @@
 interface Sim
     exposes [modifyFieldCube, modifyFieldSq, calculateSolution, makeCube, makeSquare, xyVariationSim2, xyzVariationSim2
-            , sliceCube, check, sphere, setShape, lineMotion, xyVariationSim, xyzVariationSim, pmlIzeSq, opDerivXCube, opDerivYCube,opDerivZCube, cubeElemOperation,  minusElemOp ]
+            , sliceCube, check, sphere, setShape, lineMotion, xyVariationSim, xyzVariationSim, pmlIzeSq, pmlIzeCube, opDerivXCube, opDerivYCube,opDerivZCube, cubeElemOperation,  minusElemOp ]
     imports [Util]
 
 
@@ -664,68 +664,58 @@ iterate = \ arg, cnt, exe  ->
 
 
 shapingFunction = \ x, layers, mi, epsi ->
-    m = 2.5
-    r0 = 0.001
-    d = Num.toFrac layers
-    omegaMax = (m + 1 ) *(Num.log r0 ) /(2* d * ( Num.sqrt ( mi / epsi )) )
-    ( Num.pow ( (d- (Num.toFrac x)) /d) m  )* (-omegaMax)
+    m = 2.5f32
+    r0 = 0.001f32
+    d = Num.toF32 layers
+    omegaMax = (m + 1 ) *(Num.log (Num.toF32 r0) ) /(2* d * ( Num.sqrt (( Num.toF32 mi) / Num.toF32 epsi )) )
+    ( Num.pow ( (d- (Num.toF32 x) ) / d) m  )* (-omegaMax)
         
 pmlIzeSq  = \ sq, layers , mi , epsi  ->
  
     sizeX = getSqSizeX sq - 1
     sizeY = getSqSizeY sq - 1    
 
-    xEgesAlteredSq = iterate sq sizeY ( \ sq1, cntY ->
+    xEdgesAlteredSq = iterate sq sizeY ( \ sq1, cntY ->
             iterate sq1 layers ( \ sq2, cntX-> 
                 modifFront = getFeldSq  sq2 cntX  cntY (Util.createNodeAni   0 1 0 0 0)
                 modifBack = getFeldSq  sq2 (sizeX - cntX) cntY (Util.createNodeAni   0 1 0 0 0)
                 modifyFieldSq sq2 cntX  cntY  {modifFront &  omega : { x:(shapingFunction cntX layers mi epsi), y :  modifFront.omega.y, z: modifFront.omega.z } }     
                 |> modifyFieldSq  (sizeX - cntX)  cntY  {modifBack &  omega : { x:(shapingFunction cntX layers mi epsi), y :  modifBack.omega.y, z: modifBack.omega.z } }  )  )
 
-    iterate xEgesAlteredSq sizeX ( \ sq1, cntX ->
+    iterate xEdgesAlteredSq sizeX ( \ sq1, cntX ->
             iterate sq1 layers ( \ sq2, cntY-> 
                 modifFront = getFeldSq  sq2 cntX  cntY (Util.createNodeAni   0 1 0 0 0)
                 modifBack = getFeldSq  sq2 cntX (sizeY - cntY) (Util.createNodeAni   0 1 0 0 0)
                 modifyFieldSq sq2 cntX  cntY  {modifFront &  omega : { x:modifFront.omega.x, y : (shapingFunction cntY layers mi epsi), z: modifFront.omega.z } }     
                 |> modifyFieldSq  cntX  (sizeY - cntY)  {modifBack &  omega : { x:modifBack.omega.x, y : (shapingFunction cntY layers mi epsi), z: modifBack.omega.z } }  )  )
 
-pmlIzeCube  = \ cube, layers   ->
-    m = 2.5
-    r0 = 0.00001
-    mi = 1
-    epsi = 1
-    d = layers
-    
-    #omegaMax = (m + 1 ) *Num.Log( r0 ) /(2* d * sqrt( mi / epsi ))
-    #( Num.pow (x/d) m  )* omegaMax
- 
-    sizeX = getCubeSizeX cube
-    sizeY = getCubeSizeY cube 
-    sizeZ = getCubeSizeZ cube 
+pmlIzeCube  = \ cube, layers, mi, epsi   ->
 
-    res1 = iterate cube sizeZ ( \ cube1, cntZ -> 
+    sizeX = getCubeSizeX cube - 1
+    sizeY = getCubeSizeY cube - 1
+    sizeZ = getCubeSizeZ cube - 1
+
+    xEdgesAlteredCb = iterate cube sizeZ ( \ cube1, cntZ -> 
         iterate cube1 sizeY ( \ cube2, cntY ->
             iterate cube2 layers ( \ cube3, cntX-> 
                 modifFront = getFeldCube  cube3 cntX  cntY cntZ (Util.createNodeAni   0 1 0 0 0)
-                modifBack = getFeldCube  cube3  (layers - cntX)  cntY cntZ (Util.createNodeAni   0 1 0 0 0)
-                modifyFieldCube cube3 cntX  cntY cntZ {modifFront &  omega : { x:1, y :  modifFront.omega.y, z: modifFront.omega.z } }     
-                |> modifyFieldCube  (layers - cntX)  cntY cntZ {modifBack &  omega : { x:1, y :  modifBack.omega.y, z: modifBack.omega.z } }  )  ))
-
-    res2 = iterate cube sizeZ ( \ cube1, cntZ -> 
+                modifBack = getFeldCube  cube3  (sizeX - cntX)  cntY cntZ (Util.createNodeAni   0 1 0 0 0)
+                modifyFieldCube cube3 cntX  cntY cntZ {modifFront &  omega : { x:(shapingFunction cntX layers mi epsi), y :  modifFront.omega.y, z: modifFront.omega.z } }     
+                |> modifyFieldCube  (sizeX - cntX)  cntY cntZ {modifBack &  omega : { x:(shapingFunction cntX layers mi epsi), y :  modifBack.omega.y, z: modifBack.omega.z } }  )  ))
+    yEdgesAlteredCb = iterate xEdgesAlteredCb sizeZ ( \ cube1, cntZ -> 
         iterate cube1 sizeX ( \ cube2, cntX ->
             iterate cube2 layers ( \ cube3, cntY-> 
                 modifFront = getFeldCube  cube3 cntX  cntY cntZ (Util.createNodeAni   0 1 0 0 0)
-                modifBack = getFeldCube  cube3  cntX  (layers - cntY) cntZ (Util.createNodeAni   0 1 0 0 0)
-                modifyFieldCube cube3 cntX  cntY cntZ {modifFront &  omega : { x: modifFront.omega.x, y : 1, z: modifFront.omega.z   } }     
-                |> modifyFieldCube  cntX (layers - cntY) cntZ {modifBack &  omega : {  x: modifBack.omega.x, y : 1, z: modifBack.omega.z  } }  )  ))
+                modifBack = getFeldCube  cube3  cntX  (sizeY - cntY) cntZ (Util.createNodeAni   0 1 0 0 0)
+                modifyFieldCube cube3 cntX  cntY cntZ {modifFront &  omega : { x: modifFront.omega.x, y :(shapingFunction cntY layers mi epsi), z: modifFront.omega.z   } }     
+                |> modifyFieldCube  cntX (sizeY - cntY) cntZ {modifBack &  omega : {  x: modifBack.omega.x, y : (shapingFunction cntY layers mi epsi), z: modifBack.omega.z  } }  )  ))
 
-    res3 = iterate cube sizeX ( \ cube1, cntX -> 
+    iterate yEdgesAlteredCb sizeX ( \ cube1, cntX -> 
         iterate cube1 sizeY ( \ cube2, cntY ->
             iterate cube2 layers ( \ cube3, cntZ-> 
                 modifFront = getFeldCube  cube3 cntX  cntY cntZ  (Util.createNodeAni   0 1 0 0 0)
-                modifBack = getFeldCube  cube3  cntX  cntY (layers - cntZ)  (Util.createNodeAni   0 1 0 0 0)
-                modifyFieldCube cube3 cntX  cntY cntZ {modifFront &  omega : {  x: modifFront.omega.x, y: modifFront.omega.y,  z : 1  } }     
-                |> modifyFieldCube  cntX cntY (layers - cntZ) {modifBack &  omega : { x: modifBack.omega.x, y: modifBack.omega.y,  z : 1  } }  )  ))
-    5
+                modifBack = getFeldCube  cube3  cntX  cntY (sizeZ - cntZ)  (Util.createNodeAni   0 1 0 0 0)
+                modifyFieldCube cube3 cntX  cntY cntZ {modifFront &  omega : {  x: modifFront.omega.x, y: modifFront.omega.y,  z : (shapingFunction cntZ layers mi epsi)} }     
+                |> modifyFieldCube  cntX cntY (sizeZ - cntZ) {modifBack &  omega : { x: modifBack.omega.x, y: modifBack.omega.y,  z : (shapingFunction cntZ layers mi epsi)} }  )  ))
 
 

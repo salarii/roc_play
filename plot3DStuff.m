@@ -19,9 +19,9 @@ colormap ("default");
  
  %pgCnt =  size(fieldX.reshaped,3);
  pgCnt =  size(vecStuff.vecX,4);
-fontSize  = 5;
-lineSize  =5;
- 
+fontSize  = 30;
+lineSize  =7;
+ mod = 2;
  p = 1
  for  j = 1:pgCnt/p
    
@@ -30,16 +30,17 @@ lineSize  =5;
     axX = vecStuff.xx;
     axY = vecStuff.yy;
     axZ = vecStuff.zz; 
-    vecX = vecStuff.vecX(:,:,:,j*p);
-    vecY = vecStuff.vecY(:,:,:,j*p); 
-    vecZ = vecStuff.vecZ(:,:,:,j*p);
+    vecX = vecStuff.vecX(:,:,:,j*p) *mod;
+    vecY = vecStuff.vecY(:,:,:,j*p) *mod; 
+    vecZ = vecStuff.vecZ(:,:,:,j*p) *mod;
     
    
     
     if  (j == 1) 
-      h = quiver3 ( axX, axY, axZ, vecX, vecY, vecZ,'ShowArrowHead','on','linewidth',5,"udatasource", "vecX","vdatasource", "vecY","wdatasource", "vecZ");
+      h = quiver3 ( axX, axY, axZ, vecX, vecY, vecZ,'ShowArrowHead','on','linewidth',7,"udatasource", "vecX","vdatasource", "vecY","wdatasource", "vecZ");
       %axis ([0 size(fieldX.xx,2)  0 size(fieldX.yy,1) -1 1]);
       set(h,'MaxHeadSize',0.2,'AutoScale','off', 'AutoScaleFactor', 1)
+      
       set(gca, "linewidth", lineSize, "fontsize", fontSize);
       title (" Field ");
       grid on 

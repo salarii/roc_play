@@ -1,6 +1,6 @@
 interface Util
     exposes [getFromList, getListFromList, createNode, createNodeAni,
-            printCubes, getRelevant]
+            printCubes, getRelevant, makeStringCube, makeStringSq]
     imports []
     
     
