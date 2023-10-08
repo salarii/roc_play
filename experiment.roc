@@ -90,21 +90,21 @@ main =
     # cube  simulation
     
     
-    size  = 5
+    size  = 3
     
-    #xOrange = Sim.makeCube size (size + 1) (size + 1) (Util.createNode   0 1 0)
-    #yOrange = Sim.makeCube (size + 1) size (size + 1) (Util.createNode   0 1 0)
-    #zOrange = Sim.makeCube (size + 1) (size + 1) size (Util.createNode   0 1 0)
+    xOrange = Sim.makeCube size (size + 1) (size + 1) (Util.createNode   0 1 0)
+    yOrange = Sim.makeCube (size + 1) size (size + 1) (Util.createNode   0 1 0)
+    zOrange = Sim.makeCube (size + 1) (size + 1) size (Util.createNode   0 1 0)
     
-    #xBlue = Sim.makeCube (size +1 ) size size (Util.createNode   0 1 0)
-    #yBlue = Sim.makeCube size (size + 1) size (Util.createNode   0 1 0)
-    #zBlue = Sim.makeCube size size (size + 1) (Util.createNode   0 1 0)
+    xBlue = Sim.makeCube (size +1 ) size size (Util.createNode   0 1 0)
+    yBlue = Sim.makeCube size (size + 1) size (Util.createNode   0 1 0)
+    zBlue = Sim.makeCube size size (size + 1) (Util.createNode   0 1 0)
 
     xBlue = Sim.makeCube size  size size (Util.createNodeAni   0 1 0 0 0)
     
-    Sim.pmlIzeCube  xBlue  2  1 1
-    |> Util.makeStringCube  getOmega  {y:"\n",z:"\n"}
-    |> Stdout.line 
+    #Sim.pmlIzeCube  xBlue  2  1 1
+    #|> Util.makeStringCube  getOmega  {y:"\n",z:"\n"}
+    #|> Stdout.line 
 #    xModif= Sim.modifyFieldCube  zBlue 2 2 2 (Util.createNode   1 1 0)
 
     #result =  Sim.cubeElemOperation  xModif zBlue Sim.minusElemOp

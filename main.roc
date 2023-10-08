@@ -32,7 +32,10 @@ forceCube = \ cubeX1, cubeY1, cubeZ1, cubeX2, cubeY2, cubeZ2, deltaT, cnt ->
     {xField1 : cubeX1,  yField1 : cubeY1, zField1  : cubeZ1, xField2 : cubeX2,  yField2 : cubeY2, zField2  : modifZ2 } 
 
 forceCube2 = \ cubeX1, cubeY1, cubeZ1, cubeX2, cubeY2, cubeZ2, deltaT, cnt ->
-    modifZ2  = Sim.modifyFieldCube  cubeZ2  1 1 1   (Util.createNodeAni  1 1 0 0 0)
+    sinRes = 1 #( Num.sin ((  (2 * Num.pi/ Num.toF32 50 ) * Num.toF32  deltaT * Num.toF32  cnt ) ))
+    modifZ2  = 
+        Sim.modifyFieldCube  cubeZ2  9 9 12   (Util.createNodeAni  sinRes 1 0 0 0)
+        |> Sim.modifyFieldCube    9 9 8   (Util.createNodeAni  sinRes 1 0 0 0)
     {xField1 : cubeX1,  yField1 : cubeY1, zField1  : cubeZ1, xField2 : cubeX2,  yField2 : cubeY2, zField2  : modifZ2 } 
 
     
@@ -113,7 +116,7 @@ main =
         #Stdout.line (Util.printCubes  result.zField2  {y:"\n",z:"\n"})
         
         #  3D  simulation  2
-        size  = 3
+        size  = 20
         xOrange = Sim.makeCube size (size + 1) (size + 1) (Util.createNodeAni   0 1 0 0 0)
         yOrange = Sim.makeCube (size + 1) size (size + 1) (Util.createNodeAni   0 1 0 0 0)
         zOrange = Sim.makeCube (size + 1) (size + 1) size (Util.createNodeAni   0 1 0 0 0)
@@ -122,8 +125,16 @@ main =
         yBlue = Sim.makeCube size (size + 1) size (Util.createNodeAni   0 1 0 0 0)
         zBlue = Sim.makeCube size size (size + 1) (Util.createNodeAni   0 1 0 0 0)
 
-        result = Sim.xyzVariationSim2  {deltaSpace : 1, deltaT : 0.1} xOrange yOrange zOrange xBlue yBlue zBlue forceCube2 1000 {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
-    
+        pmlxOrange = Sim.pmlIzeCube  xOrange 5  1 1
+        pmlyOrange = Sim.pmlIzeCube  yOrange 5  1 1
+        pmlzOrange = Sim.pmlIzeCube  zOrange 5  1 1
+        
+        pmlxBlue = Sim.pmlIzeCube  xBlue 5  1 1
+        pmlyBlue = Sim.pmlIzeCube  yBlue 5  1 1
+        pmlzBlue = Sim.pmlIzeCube  zBlue 5  1 1
+        
+        result = Sim.xyzVariationSim2  {deltaSpace : 1, deltaT : 0.1} pmlxOrange pmlyOrange pmlzOrange pmlxBlue pmlyBlue pmlzBlue forceCube2 310 {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
+        #result = Sim.xyzVariationSim2  {deltaSpace : 1, deltaT : 0.1} xOrange yOrange zOrange xBlue yBlue zBlue forceCube2 1000 {xField1 : [],  yField1 : [], zField1  : [], xField2 : [],  yField2 : [], zField2  : [] }  
         xF1log = (Util.printCubes  result.xField1  {y:"\n",z:""})
         yF1log = (Util.printCubes  result.yField1  {y:"\n",z:""})
         zF1log = (Util.printCubes  result.zField1  {y:"\n",z:""})
@@ -137,7 +148,8 @@ main =
         _ <- File.writeUtf8 xField2Path xF2log |> Task.await
         _ <- File.writeUtf8 yField2Path yF2log |> Task.await
         _ <- File.writeUtf8 zField2Path zF2log |> Task.await          
-        Stdout.line (Util.printCubes  result.yField2  {y:"\n",z:"\n"})
+        Stdout.line "done"
+        #Stdout.line (Util.printCubes  result.yField2  {y:"\n",z:"\n"})
         
     Task.attempt task \result ->
         when result is

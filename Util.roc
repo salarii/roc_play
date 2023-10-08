@@ -17,10 +17,10 @@ getListFromList = \ list, cnt  ->
         
         
 createNode = \ val, param, omega->
-    {value : val, param : param, omega : omega }
+    {value : Num.toF32 val, param : Num.toF32 param, omega : Num.toF32 omega }
     
 createNodeAni = \ val, param, omegaX, omegaY, omegaZ ->
-    {value : val, param : param, omega : {x : omegaX, y: omegaY, z: omegaZ} }
+    {value : Num.toF32 val, param : Num.toF32 param, omega : {x : Num.toF32 omegaX, y: Num.toF32 omegaY, z: Num.toF32 omegaZ} }
     
 getRelevant = \ elem ->
     Num.toStr elem.value
