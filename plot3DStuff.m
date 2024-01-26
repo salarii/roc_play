@@ -138,7 +138,7 @@ p = 1
      %if (j > 1000 )
      %  break;
      % endif
-    pause(0.3) 
+    pause(0.2) 
 
 end 
  
