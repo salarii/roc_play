@@ -1,5 +1,5 @@
 interface Matrix
-    exposes [ printMatrix, solve]
+    exposes [ printMatrix, solve, mul, transpose, create]
     imports []
 
 MatrixType a : List ( List (Frac a))
@@ -44,14 +44,11 @@ gaussMethodInternal = \ mat, tmp ->
                                     Err "operation can't be performed on this matrix"
                                 else
                                     modifier = pasive/active
-                                    when arr is
-                                        [.. as lst, idx] ->
-                                            Ok (List.append state (
-                                                (List.map2 lst head ( \ pasiveElem, activeElem ->
-                                                        pasiveElem - modifier * activeElem
-                                                    ))
-                                                |> List.append idx))
-                                        _ -> Err "operation can't be performed on this matrix"
+                                    Ok (List.append state (
+                                            (List.map2 arr head ( \ pasiveElem, activeElem ->
+                                                    pasiveElem - modifier * activeElem
+                                                ))))
+
                             _ -> Err "operation can't be performed on this matrix")
                     |> ( \ processingResult ->
                         when processingResult is
@@ -82,7 +79,7 @@ solveFromGauss = \ b, gauss ->
     )
     |> (\ unboxed ->
         when unboxed is
-            Ok unbox -> Ok [unbox]
+            Ok unbox -> Ok [ List.reverse unbox]
             Err message -> Err message)
 
 getSize : MatrixType a -> (Nat, Nat)
@@ -107,40 +104,14 @@ solve = \  a, b ->
             else
                 transpose b
 
-        idx =
-            List.range { start: At 0, end: At (sizeA.0 - 1) }
-            |> List.map ( \ val -> Num.toFrac val )
-
         when merge a updatedB 1 is
             Ok glued ->
-                when merge glued (transpose [idx]) 1 is
-                    Ok gluedWithIdx ->
-                        dbg  glued
-                        dbg  gluedWithIdx
-
-                        when gaussMethod gluedWithIdx is
-                            Ok gauss ->
-                                dbg gauss
-                                when split gauss 1 (sizeA.0 +1 ) is
-                                    Ok  splitOnIdx ->
-                                        when split splitOnIdx.0 1 sizeA.0 is
-                                            Ok splited ->
-                                                when solveFromGauss splited.1 splited.0 is
-                                                    Ok solution ->
-                                                        List.walkTry (List.join splitOnIdx.1)  [] (\ sol, id ->
-                                                            when List.get (List.join solution) (Num.toNat (Num.floor id)) is
-                                                                Ok result ->
-                                                                    Ok (List.append sol result)
-                                                                _ -> Err "problem during result processing"
-                                                            ) |> (\  finalOut ->
-                                                                when finalOut is
-                                                                    Ok final -> Ok [final]
-                                                                    Err message -> Err message
-                                                                )
-                                                    Err message -> Err message
-                                            Err message -> Err message
-                                    Err message -> Err message
-                            Err message -> Err message
+                when gaussMethod glued is
+                    Ok gauss ->
+                            when split gauss 1 sizeA.0 is
+                                Ok splited ->
+                                    solveFromGauss splited.1 splited.0
+                                Err message -> Err message
                     Err message -> Err message
             Err message -> Err message
 
@@ -151,7 +122,7 @@ transpose =\ mat ->
             mat
         [head, .. as tail ] ->
             List.walk tail (List.chunksOf head 1) ( \ state, row ->
-                List.map2 state  (List.chunksOf head 1) ( \ left, right ->
+                List.map2 state  (List.chunksOf row 1) ( \ left, right ->
                     List.concat left right ) )
 
 merge : MatrixType a, MatrixType a, Nat -> Result (MatrixType a) Str
@@ -194,6 +165,27 @@ merge = \ dest, src, dim ->
     else
         Err "inproper dimension"
 
+mul : MatrixType a, MatrixType a -> Result (MatrixType a) Str
+mul = \ left, right ->
+    sizeLeft = getSize left
+    sizeRigh = getSize right
+
+    if sizeLeft.1 == sizeRigh.0 then
+        transp = transpose right
+        Ok
+            (List.walk left [] ( \ outMat, row ->
+                List.append outMat (
+                    (List.walk transp [] ( \ outRow, col ->
+                        List.append  outRow (
+                        List.map2 row  col (\ elem1, elem2 ->
+                            elem1 * elem2
+                        )
+                        |> List.sum )
+                    )) )
+            ) )
+    else
+        Err "Incompatible sizes"
+
 printMatrix : MatrixType a -> Str
 printMatrix = \ mat ->
     adjustFront : Str, Str, Nat -> Str
@@ -204,12 +196,12 @@ printMatrix = \ mat ->
     strRound = \ val, round ->
 
         rounded =
-            Num.toStr (Num.floor ( ( val - (Num.toFrac (Num.floor val))) * (Num.pow 10.0 round)))
+            Num.toStr (Num.round ( ( val - (Num.toFrac (Num.round val))) * (Num.pow 10.0 round)))
             |> ( \ restStr ->
-                adjustFront restStr "0" ((Num.toNat (Num.floor round)) - (List.len  (Str.toUtf8 restStr)) ))
-        #adjustment = ( Str.repeat  " " ( (Num.toNat (Num.floor round)) -  (List.len (Str.toUtf8 rounded )) ) )
+                adjustFront restStr "0" ((Num.toNat (Num.round round)) - (List.len  (Str.toUtf8 restStr)) ))
+        #adjustment = ( Str.repeat  " " ( (Num.toNat (Num.round round)) -  (List.len (Str.toUtf8 rounded )) ) )
 
-        Num.toStr (Num.floor val)
+        Num.toStr (Num.round val)
         |> Str.concat "."
         |> Str.concat rounded
         #|> Str.concat adjustment
@@ -234,3 +226,18 @@ printMatrix = \ mat ->
         )
     )
 
+create : List (List (Num a)), (Num a -> Frac b) -> Result (MatrixType b) Str
+create = \ seedLst, convert ->
+    conversion : (List (Num a)) -> List (Frac b )
+    conversion = \ lst ->
+        List.map lst (\elem -> convert elem )
+
+    List.walkTry seedLst [] ( \ mat, row  ->
+        when mat  is
+            [] -> Ok  [conversion row]
+            [ .. as head, last ] ->
+                if List.len last == List.len row then
+                    Ok ( List.append mat ( conversion row) )
+                else
+                    Err "wrong size can't create matrix"
+    )

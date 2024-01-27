@@ -10,14 +10,29 @@ app "peek"
 
 main =
 
-    #a = [[22.0f64, 4.0f64, 1.0f64],[22.0f64, 4.0f64, 3.0f64],[2.0f64, 405.55f64, 3f64]]
-    a = [[2.0f64, 3.0f64],[4.0f64, 5.0f64]]
-    b = [[1.0f64, 2.0f64]]
 
 
-    dbg Matrix.solve  a  b
+    aa = Matrix.create [[2 ,3, 2, 1 , 7], [4 ,5 ,-1,2 ,4 ],[ 1 , 1 ,3,3, 9 ],[ 1 , 1 ,-1 ,0, 2 ], [ 1,-1,-2,3,4 ]] Num.toF64
 
-    _ <- Stdout.line (Matrix.printMatrix a)  |> Task.await
+    bb = Matrix.create [[1, 1, 3, 2, -1]]  Num.toF64
+
+
+    multi = \ a, b ->
+        when (a, b) is
+            (Ok aMat, Ok bMat) ->
+                dbg   aMat
+                dbg bMat
+                when  Matrix.solve  aMat bMat  is
+                    Ok result ->
+                        when Matrix.mul aMat (Matrix.transpose  result) is
+                            Ok backToResult ->
+                                (Matrix.printMatrix backToResult)
+                            Err message -> message
+                    Err  message -> message
+            _ -> "at least  one matrix incorrectly created"
+
+
+    _ <- Stdout.line (multi  aa  bb)  |> Task.await
     Stdout.line "test  ok"
 
 
