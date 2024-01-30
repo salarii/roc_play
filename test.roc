@@ -5,34 +5,52 @@ app "peek"
         pf.Stdout,
         pf.Task.{ Task ,await },
         Matrix,
+        Solvers,
         ]
     provides [main] to pf
 
+
+f = \ mat ->
+    when mat is
+        [lst] ->
+            when lst is
+                [x, y] ->
+                    (Num.pow  x  2) +  (Num.pow  y  2) - 10
+                _-> 0
+        _ -> 0
+
+g = \ mat ->
+    when mat is
+        [lst] ->
+            when lst is
+                [x, y] ->
+                    x * y - 4
+                _-> 0
+        _ -> 0
+
 main =
 
-
-
+    hhh =  Solvers.tryFindZeroPoint [f, g] [[4f64, 4f64]]   20  0.01
+    out = when hhh is
+                Ok tada ->
+                    (Matrix.printMatrix tada)
+                Err message -> message
     aa = Matrix.create [[2 ,3, 2, 1 , 7], [4 ,5 ,-1,2 ,4 ],[ 1 , 1 ,3,3, 9 ],[ 1 , 1 ,-1 ,0, 2 ], [ 1,-1,-2,3,4 ]] Num.toF64
 
-    bb = Matrix.create [[1, 1, 3, 2, -1]]  Num.toF64
+    # bb = Matrix.create [[1, 1, 3, 2, -1]]  Num.toF64
 
+    # gg =
+    #     when (Matrix.create [[1, 0, 1, 0],[ 3, 3, 7, 1 ],[ -1,2,2, 0],[ -2,1,1, 0]] Num.toF64) is
+    #         Ok tada ->
+    #             when Matrix.inverse  tada  is
+    #                 Ok inv ->
+    #                     dbg inv
+    #                     (Matrix.printMatrix inv)
+    #                 Err message -> message
+    #         Err message -> message
 
-    multi = \ a, b ->
-        when (a, b) is
-            (Ok aMat, Ok bMat) ->
-                dbg   aMat
-                dbg bMat
-                when  Matrix.solve  aMat bMat  is
-                    Ok result ->
-                        when Matrix.mul aMat (Matrix.transpose  result) is
-                            Ok backToResult ->
-                                (Matrix.printMatrix backToResult)
-                            Err message -> message
-                    Err  message -> message
-            _ -> "at least  one matrix incorrectly created"
-
-
-    _ <- Stdout.line (multi  aa  bb)  |> Task.await
+    #_ <- Stdout.line (Matrix.printMatrix (Matrix.unit 20 )) |> Task.await
+    # _ <- Stdout.line out  |> Task.await
     Stdout.line "test  ok"
 
 

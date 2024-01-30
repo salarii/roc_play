@@ -1,5 +1,18 @@
 interface Matrix
-    exposes [ printMatrix, solve, mul, transpose, create]
+    exposes [
+        printMatrix,
+        solve,
+        mul,
+        transpose,
+        matrixElemOp,
+        create,
+        merge,
+        inverse,
+        getSize,
+        split,
+        scalarOp,
+        createSingleValue,
+        unit]
     imports []
 
 MatrixType a : List ( List (Frac a))
@@ -103,15 +116,14 @@ solve = \  a, b ->
                 b
             else
                 transpose b
-
         when merge a updatedB 1 is
             Ok glued ->
                 when gaussMethod glued is
                     Ok gauss ->
-                            when split gauss 1 sizeA.0 is
-                                Ok splited ->
-                                    solveFromGauss splited.1 splited.0
-                                Err message -> Err message
+                        when split gauss 1 sizeA.0 is
+                            Ok splited ->
+                                solveFromGauss splited.1 splited.0
+                            Err message -> Err message
                     Err message -> Err message
             Err message -> Err message
 
@@ -130,17 +142,19 @@ merge = \ dest, src, dim ->
     sizeDest = getSize dest
     sizeSrc = getSize src
     if dim == 0 then
-        if sizeDest.1 == sizeSrc.1 then
+        if sizeDest.1 == 0 || sizeDest.1 == sizeSrc.1 then
             Ok (List.concat dest src)
         else
-            Err "Incompatible sizes can't split"
+            Err "Incompatible sizes can't merge"
     else if dim == 1 then
         if sizeDest.0 == sizeSrc.0 then
             Ok (
                 List.map2 dest src ( \ left, right ->
                     List.concat  left right ) )
+        else if sizeDest.0 == 0 then
+            Ok ( src )
         else
-            Err "Incompatible sizes can't split"
+            Err "Incompatible sizes can't merge"
 
     else
         Err "inproper dimension"
@@ -196,16 +210,23 @@ printMatrix = \ mat ->
     strRound = \ val, round ->
 
         rounded =
-            Num.toStr (Num.round ( ( val - (Num.toFrac (Num.round val))) * (Num.pow 10.0 round)))
+            Num.toStr (Num.floor ( ( ( (Num.abs val) - (Num.toFrac (Num.floor (Num.abs val))))) * (Num.pow 10.0 round)))
             |> ( \ restStr ->
                 adjustFront restStr "0" ((Num.toNat (Num.round round)) - (List.len  (Str.toUtf8 restStr)) ))
-        #adjustment = ( Str.repeat  " " ( (Num.toNat (Num.round round)) -  (List.len (Str.toUtf8 rounded )) ) )
 
-        Num.toStr (Num.round val)
+        valueStr =
+            if Num.isNegative val then
+                str = Num.toStr (Num.ceiling val)
+                if (Num.ceiling val) == 0 then
+                    Str.concat "-" str
+                else
+                    str
+            else
+                Num.toStr (Num.floor val)
+
+        valueStr
         |> Str.concat "."
         |> Str.concat rounded
-        #|> Str.concat adjustment
-
 
     strMat =
         List.map mat ( \ row ->
@@ -226,6 +247,35 @@ printMatrix = \ mat ->
         )
     )
 
+inverse : MatrixType a -> Result (MatrixType a)  Str
+inverse = \ mat ->
+    size = getSize mat
+    if size.0 == size.1 then
+        iterate : MatrixType a, Nat -> Result (MatrixType a)  Str
+        iterate = \ out, cnt ->
+            if cnt == List.len mat then
+                Ok out
+            else
+                current =
+                    List.repeat 0 size.1
+                    |> List.set cnt 1
+                when (create [current] Num.toFrac) is
+                    Ok iterB ->
+                        when solve mat iterB is
+                            Ok result ->
+                                when out is
+                                    [] -> iterate (transpose result) (cnt + 1)
+                                    _ ->
+                                        when merge out (transpose result) 1 is
+                                            Ok toOut ->
+                                                iterate toOut (cnt + 1)
+                                            Err message -> Err message
+                            Err message -> Err message
+                    Err  message -> Err message
+        iterate [] 0
+    else
+        Err "matrix must be square"
+
 create : List (List (Num a)), (Num a -> Frac b) -> Result (MatrixType b) Str
 create = \ seedLst, convert ->
     conversion : (List (Num a)) -> List (Frac b )
@@ -241,3 +291,42 @@ create = \ seedLst, convert ->
                 else
                     Err "wrong size can't create matrix"
     )
+
+createSingleValue : Frac a, Nat, Nat -> MatrixType a
+createSingleValue = \ val, rowCnt, colCnt ->
+    List.repeat (List.repeat val colCnt) rowCnt
+
+scalarOp : MatrixType a, Frac a, (Frac a, Frac a -> Frac a) -> MatrixType a
+scalarOp = \ mat, val, op ->
+    List.map mat ( \ row ->
+        List.map row ( \ elem -> op elem val ) )
+
+matrixElemOp : MatrixType a, MatrixType a, (Frac a, Frac a -> Frac a) -> Result (MatrixType a) Str
+matrixElemOp = \ left, right, op ->
+    if getSize left != getSize right then
+        Err "wrong matrices sizes"
+    else
+        Ok (
+            List.map2 left right (\ leftRow, rightRow ->
+                List.map2 leftRow  rightRow (\ leftElem, rightElem ->
+                    op leftElem rightElem
+                )
+        ))
+
+
+unit : Nat -> MatrixType a
+unit = \ size ->
+    row =
+        List.concat  [1]  (List.repeat 0 (size - 1))
+        |> List.map (\ val -> Num.toFrac val)
+
+    replicate : MatrixType a, List (Frac a ), Nat -> MatrixType a
+    replicate = \ in, currentRow,  cnt ->
+        if cnt == 0 then
+            in
+        else
+            modified = List.swap currentRow ((List.len currentRow) - cnt) ((List.len currentRow) - cnt - 1)
+            List.append in modified
+            |> replicate modified (cnt - 1)
+
+    replicate [row] row  (size - 1)
