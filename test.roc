@@ -30,6 +30,13 @@ g = \ mat ->
 
 main =
 
+    pp = Solvers.rkSolver  -1f64  0f64  0.1f64  0.0001f64  10f64  ( \ a, b -> Num.sin a )  []
+    str =
+        List.map pp  ( \val ->
+            Str.concat (Num.toStr  val.0) "="
+            |> Str.concat (Num.toStr  val.1))
+        |> Str.joinWith "  "
+    # dbg  pp
     hhh =  Solvers.tryFindZeroPoint [f, g] [[4f64, 4f64]]   20  0.01
     out = when hhh is
                 Ok tada ->
@@ -51,6 +58,7 @@ main =
 
     #_ <- Stdout.line (Matrix.printMatrix (Matrix.unit 20 )) |> Task.await
     # _ <- Stdout.line out  |> Task.await
+    _ <- Stdout.line str |> Task.await
     Stdout.line "test  ok"
 
 

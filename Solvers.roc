@@ -1,5 +1,5 @@
 interface Solvers
-    exposes [tryFindZeroPoint]
+    exposes [tryFindZeroPoint,rkSolver]
     imports [Matrix.{MatrixType}]
 
 FunctionType a : ( MatrixType a  -> Frac a )
@@ -97,3 +97,35 @@ tryFindZeroPoint = \ functions, startPoint, iterationsCnt ,hitTolerance ->
         deltas = List.repeat 0.01 size
         directions = Matrix.unit size
         tryFindZeroPointInternal functions startPoint deltas directions iterationsCnt hitTolerance
+
+# error when:
+# rkSolver :  Frac a , Frac a, Frac a, Frac a,Frac a, (Frac a -> Frac a), List (Frac a ) -> List (Frac a)
+rkSolver :  Frac a, Frac a, Frac a, Frac a, Frac a, (Frac a, Frac a -> Frac a), List (Frac a, Frac a ) -> List (Frac a, Frac a )
+rkSolver = \ y, x, h, err, end , fun, result ->
+    if x >= end then
+        result
+    else
+        # again  I have to pass fun as parameter is that correct ??
+        evalIncrement : Frac a, Frac a, Frac a, (Frac a, Frac a -> Frac a)-> Frac a
+        evalIncrement = \ yi, xi, hi, funi ->
+            k1 = hi * (funi xi yi)
+            k2 = hi * (funi (xi + 0.5*hi ) (yi + 0.5 * k1))
+            k3 = hi * (funi (xi + 0.5*hi ) (yi + 0.5 * k2))
+            k4 = hi * (funi (xi + hi ) (yi + k3))
+            (k1 + k4) * (1/6) + ( k2 + k3 ) * 2/6
+
+        twoStep =
+            evalIncrement  y x (h/2) fun
+            |> evalIncrement  x (h/2) fun
+
+        oneStep = evalIncrement  y x h fun
+        mod = 1 / ((Num.pow 2 4) - 1)
+        estErr =  (twoStep - oneStep) * mod
+
+        if estErr > err then
+            rkSolver y x (h/2) err end fun result
+        else
+            if err * 50 > estErr then
+                rkSolver (oneStep + y) (x+h) (h*2) err end fun (List.append result  (x+h ,oneStep + y))
+            else
+                rkSolver (oneStep + y) (x+h) h err end fun (List.append result  (x+h ,oneStep + y))
