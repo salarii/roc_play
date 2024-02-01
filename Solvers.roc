@@ -1,5 +1,5 @@
 interface Solvers
-    exposes [tryFindZeroPoint,rkSolver]
+    exposes [tryFindZeroPoint,rkSolver,rkSolverM]
     imports [Matrix.{MatrixType}]
 
 FunctionType a : ( MatrixType a  -> Frac a )
@@ -31,11 +31,11 @@ tryFindZeroPointInternal = \ functions, startPoint, deltas, directions, iteratio
         else
             when Matrix.split pace 0 1 is
                 Ok paceSplit ->
-                    when Matrix.matrixElemOp state.x paceSplit.0 (\a, b -> a + b) is
+                    when Matrix.elemWiseOp state.x paceSplit.0 (\a, b -> a + b) is
                         Ok nextX ->
                             when Matrix.merge state.deltaX  paceSplit.0 0 is
                                 Ok xDeltaMat ->
-                                    when Matrix.matrixElemOp
+                                    when Matrix.elemWiseOp
                                         [List.map funLst (\ fun ->  fun nextX )]
                                         [List.map funLst (\ fun ->  fun state.x )]
                                         (\a, b -> a - b) is
@@ -70,7 +70,7 @@ tryFindZeroPointInternal = \ functions, startPoint, deltas, directions, iteratio
                                 Ok aMat ->
                                     when Matrix.mul aMat (Matrix.transpose [List.map functions (\ fun ->  fun state.x )]) is
                                         Ok correction ->
-                                            minusCorrection = Matrix.scalarOp (Matrix.transpose correction)  -1  ( \a,b -> a*b )
+                                            minusCorrection = Matrix.scalarOp (Matrix.transpose correction)  -1  Num.mul
                                             when createAF funLst minusCorrection state deltasSize is
                                                 Ok afUpdated ->
                                                     iteration funLst {x : afUpdated.x, deltaX: afUpdated.deltaX, deltaFun : afUpdated.deltaFun } (iter - 1)
@@ -100,8 +100,8 @@ tryFindZeroPoint = \ functions, startPoint, iterationsCnt ,hitTolerance ->
 
 # error when:
 # rkSolver :  Frac a , Frac a, Frac a, Frac a,Frac a, (Frac a -> Frac a), List (Frac a ) -> List (Frac a)
-rkSolver :  Frac a, Frac a, Frac a, Frac a, Frac a, (Frac a, Frac a -> Frac a), List (Frac a, Frac a ) -> List (Frac a, Frac a )
-rkSolver = \ y, x, h, err, end , fun, result ->
+rkSolver :  Frac a, Frac a, Frac a, Frac a, Frac a, Frac a, (Frac a, Frac a -> Frac a), List (Frac a, Frac a ) -> List (Frac a, Frac a )
+rkSolver = \ y, x, h, maxH,err, end , fun, result ->
     if x >= end then
         result
     else
@@ -116,6 +116,7 @@ rkSolver = \ y, x, h, err, end , fun, result ->
 
         twoStep =
             evalIncrement  y x (h/2) fun
+            |> Num.add y
             |> evalIncrement  x (h/2) fun
 
         oneStep = evalIncrement  y x h fun
@@ -123,9 +124,84 @@ rkSolver = \ y, x, h, err, end , fun, result ->
         estErr =  (twoStep - oneStep) * mod
 
         if estErr > err then
-            rkSolver y x (h/2) err end fun result
+            rkSolver y x (h/2) maxH err end fun result
         else
-            if err * 50 > estErr then
-                rkSolver (oneStep + y) (x+h) (h*2) err end fun (List.append result  (x+h ,oneStep + y))
+            if err * 50 > estErr && maxH > h*2 then
+                rkSolver (oneStep + y) (x+h) (h*2) maxH err end fun (List.append result  (x+h ,oneStep + y))
             else
-                rkSolver (oneStep + y) (x+h) h err end fun (List.append result  (x+h ,oneStep + y))
+                rkSolver (oneStep + y) (x+h) h maxH err end fun (List.append result  (x+h ,oneStep + y))
+
+
+rkSolverM :  MatrixType a, Frac a, Frac a, Frac a, Frac a, Frac a, List (Frac a, MatrixType a -> Frac a), List (Frac a, MatrixType a ) -> Result ( List (Frac a, MatrixType a ) )  Str
+rkSolverM = \ y, x, h, maxH,err, end , fun, result ->
+    if x >= end then
+        Ok result
+    else
+        # again  I have to pass fun as parameter is that correct ??
+        evalIncrement : MatrixType a, Frac a, Frac a, List (Frac a, MatrixType a -> Frac a)-> Result ( MatrixType a ) Str
+        evalIncrement = \ yi, xi, hi, funLst ->
+
+            k1 = Matrix.scalarOp  [List.map funLst (\ funi -> funi xi yi)]  hi Num.mul
+            when (Matrix.elemWiseOp yi (Matrix.scalarOp k1 0.5 Num.mul) Num.add) is
+                Ok k1EstimY ->
+                    k2 = Matrix.scalarOp
+                        [List.map funLst (\ funi ->
+                            funi (xi + 0.5*hi ) k1EstimY ) ]
+                        hi
+                        Num.mul
+                    when (Matrix.elemWiseOp yi (Matrix.scalarOp k2 0.5 Num.mul) Num.add) is
+                        Ok k2EstimY ->
+                            k3 = Matrix.scalarOp
+                                [List.map funLst (\ funi ->
+                                    funi (xi + 0.5*hi ) k2EstimY ) ]
+                                hi
+                                Num.mul
+                            when  (Matrix.elemWiseOp yi k3 Num.add) is
+                                Ok k3EstimY ->
+                                    k4 =  Matrix.scalarOp
+                                        [List.map funLst (\ funi ->
+                                            funi (xi + hi ) k3EstimY ) ]
+                                        hi
+                                        Num.mul
+
+                                    k14Result = Matrix.elemWiseOp k1  k4 Num.add
+                                    k23Result = Matrix.elemWiseOp k2  k3 Num.add
+                                    when (k14Result, k23Result) is
+                                        (Ok k14,Ok  k23) ->
+                                            Matrix.elemWiseOp
+                                                (Matrix.scalarOp k14 (1/6) Num.mul)
+                                                (Matrix.scalarOp k23 (2/6) Num.mul)
+                                                Num.add
+                                        _ -> Err "unknown error in rk method"
+                                Err message -> Err message
+                        Err message -> Err message
+                Err message -> Err message
+
+        twoStepResult =
+            when evalIncrement y x (h/2) fun is
+                Ok halfWay ->
+                    when Matrix.elemWiseOp y  halfWay Num.add  is
+                        Ok halfY ->
+                            evalIncrement halfWay x (h/2) fun
+                        Err message -> Err message
+
+                Err  message -> Err  message
+
+        oneStepResult = evalIncrement  y x h fun
+        mod = 1 / ((Num.pow 2 4) - 1)
+        when (twoStepResult, oneStepResult) is
+            (Ok twoStep, Ok oneStep) ->
+                estErr =  ((Matrix.norm twoStep) - (Matrix.norm oneStep)) * mod
+                if estErr > err then
+                    rkSolverM y x (h/2) maxH err end fun result
+                else
+                    when Matrix.elemWiseOp oneStep y Num.add is
+                        Ok currY ->
+                            if err * 50 > estErr && maxH > h*2 then
+                                rkSolverM currY (x+h) (h*2) maxH err end fun (List.append result  (x+h ,currY))
+                            else
+                                rkSolverM currY (x+h) h maxH err end fun (List.append result  (x+h ,currY))
+
+                        Err message -> Err message
+
+            _ -> Err "unknown error in rk method"

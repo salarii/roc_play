@@ -4,7 +4,7 @@ interface Matrix
         solve,
         mul,
         transpose,
-        matrixElemOp,
+        elemWiseOp,
         create,
         merge,
         inverse,
@@ -12,6 +12,7 @@ interface Matrix
         split,
         scalarOp,
         createSingleValue,
+        norm,
         unit]
     imports []
 
@@ -301,8 +302,8 @@ scalarOp = \ mat, val, op ->
     List.map mat ( \ row ->
         List.map row ( \ elem -> op elem val ) )
 
-matrixElemOp : MatrixType a, MatrixType a, (Frac a, Frac a -> Frac a) -> Result (MatrixType a) Str
-matrixElemOp = \ left, right, op ->
+elemWiseOp : MatrixType a, MatrixType a, (Frac a, Frac a -> Frac a) -> Result (MatrixType a) Str
+elemWiseOp = \ left, right, op ->
     if getSize left != getSize right then
         Err "wrong matrices sizes"
     else
@@ -313,6 +314,14 @@ matrixElemOp = \ left, right, op ->
                 )
         ))
 
+
+norm : MatrixType a -> Frac  a
+norm = \ mat ->
+    List.map  mat  (\ row  ->
+        List.map row (\val -> Num.abs val )
+        |> List.sum
+    )
+    |> List.sum
 
 unit : Nat -> MatrixType a
 unit = \ size ->
