@@ -35,3 +35,12 @@ else
         set(gca, 'FontSize', fontSize, 'LineWidth', axisLineWidth); % Set font size and axis line width for each subplot
     end
 end
+
+B = [1.00  1.00  2.33  0.33 ;
+0.00  1.00  1.44  0.11 ; 
+0.00  0.00  1.00  0.25  ;
+0.00  0.00  0.00  1.00 ]
+B = [1; 2 ; 7]
+ R=[3, 4, 1; -4, 1, 8; -1  , -3, 5] 
+  inv (R) * B 
+  

@@ -1,6 +1,6 @@
 interface Matrix
     exposes [
-        printMatrix,
+        print,
         solve,
         mul,
         transpose,
@@ -13,10 +13,14 @@ interface Matrix
         scalarOp,
         createSingleValue,
         norm,
-        unit]
+        unit,
+        gaussElimination,
+        ComplexType]
     imports []
 
 MatrixType a : List ( List (Frac a))
+
+ComplexType a : (Frac a, Frac a)
 
 getMatrixValue : MatrixType a, Nat, Nat -> Result (Frac a) Str
 getMatrixValue = \ mat, row, col ->
@@ -26,50 +30,6 @@ getMatrixValue = \ mat, row, col ->
                 Ok val -> Ok val
                 _ -> Err "wrong col index"
         _ -> Err "wrong row index"
-
-gaussMethod : MatrixType a -> Result (MatrixType a) Str
-gaussMethod = \ mat ->
-    gaussMethodInternal mat []
-
-gaussMethodInternal : MatrixType a, MatrixType a -> Result (MatrixType a) Str
-gaussMethodInternal = \ mat, tmp ->
-    sorter : List (Frac a), List (Frac a) -> [ LT, EQ, GT ]
-    sorter = \ left, right ->
-        when (List.get left line, List.get right line) is
-            (Ok leftElem, Ok  rightElem) ->
-                if Num.isGt rightElem leftElem  then
-                    GT
-                else if Num.isApproxEq rightElem leftElem  {rtol :0.00001 } then
-                    EQ
-                else
-                    LT
-            _ -> GT
-
-    line = List.len tmp
-    sortedMat = List.sortWith mat sorter
-    when sortedMat is
-        [] ->
-            Ok tmp
-        [head ,.. as tail] ->
-                List.walkTry tail [] (\ state, arr ->
-                    when (List.get head line, List.get arr line) is
-                            (Ok active, Ok pasive ) ->
-                                if Num.isZero active then
-                                    Err "operation can't be performed on this matrix"
-                                else
-                                    modifier = pasive/active
-                                    Ok (List.append state (
-                                            (List.map2 arr head ( \ pasiveElem, activeElem ->
-                                                    pasiveElem - modifier * activeElem
-                                                ))))
-
-                            _ -> Err "operation can't be performed on this matrix")
-                    |> ( \ processingResult ->
-                        when processingResult is
-                            Ok processed ->
-                                gaussMethodInternal processed (List.append tmp head)
-                            Err message -> Err message
-                    )
 
 solveFromGauss : MatrixType a, MatrixType a -> Result (MatrixType a) Str
 solveFromGauss = \ b, gauss ->
@@ -119,7 +79,7 @@ solve = \  a, b ->
                 transpose b
         when merge a updatedB 1 is
             Ok glued ->
-                when gaussMethod glued is
+                when gaussElimination glued is
                     Ok gauss ->
                         when split gauss 1 sizeA.0 is
                             Ok splited ->
@@ -201,8 +161,8 @@ mul = \ left, right ->
     else
         Err "Incompatible sizes"
 
-printMatrix : MatrixType a -> Str
-printMatrix = \ mat ->
+print : MatrixType a -> Str
+print = \ mat ->
     adjustFront : Str, Str, Nat -> Str
     adjustFront = \ str, filler, cnt ->
         Str.concat ( Str.repeat  filler  cnt) str
@@ -339,3 +299,80 @@ unit = \ size ->
             |> replicate modified (cnt - 1)
 
     replicate [row] row  (size - 1)
+
+OperationType a: {
+    greater : (a, a -> Bool),
+    equal : (a, a -> Bool),
+    isZero : (a -> Bool),
+    sub : (a, a -> a),
+    mul : (a, a -> a),
+    div : (a, a -> a),
+    abs : (a -> a),
+}
+
+#
+# Num.isGt
+#
+gaussElimination : MatrixType a  -> Result (MatrixType a) Str
+gaussElimination = \ mat ->
+    op = {
+        greater : Num.isGt,
+        equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
+        isZero : Num.isZero,
+        sub : Num.sub ,
+        mul : Num.mul,
+        div : (\ a, b ->
+                    Num.div a b),
+        abs : Num.abs,
+    }
+    gaussEliminationInternal mat [] op
+
+gaussEliminationInternal : List (List a), List (List a), OperationType a -> Result (List (List a)) Str
+gaussEliminationInternal = \ mat, tmp, operations ->
+
+    sorter : List a, List  a, OperationType a -> [ LT, EQ, GT ]
+    sorter = \ left, right, op ->
+            when (List.get left line, List.get right line) is
+                (Ok leftElem, Ok  rightElem) ->
+                    if (op.greater (op.abs rightElem) (op.abs leftElem)) then
+                        GT
+                    else if op.equal rightElem leftElem then
+                        EQ
+                    else
+                        LT
+                _ -> GT
+
+    line = List.len tmp
+    sortedMat = List.sortWith mat (\ a, b -> sorter a b operations )
+    when sortedMat is
+        [] -> Ok tmp
+        # [last] ->
+        #     Ok (List.append tmp last)
+        [head ,.. as tail] ->
+            when List.get head line is
+                Ok active ->
+                    updatedHead = (List.map head ( \ elem ->
+                                    operations.div elem active ))
+                    List.walkTry tail [] (\ state, arr ->
+                        when List.get arr line is
+                                Ok pasive ->
+                                    if operations.isZero active then
+                                        Err "operation can't be performed on this matrix"
+                                    else
+                                        modifier = pasive
+
+                                        Ok (List.append state (
+                                                (List.map2 arr updatedHead ( \ pasiveElem, activeElem ->
+
+                                                        operations.sub pasiveElem (operations.mul modifier activeElem)
+                                                    ))))
+
+                                _ -> Err "operation can't be performed on this matrix")
+                    |> ( \ processingResult ->
+                        when processingResult is
+                            Ok processed ->
+
+                                gaussEliminationInternal processed (List.append tmp updatedHead) operations
+                            Err message -> Err message
+                    )
+                _ -> Err "operation can't be performed on this matrix"
