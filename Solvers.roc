@@ -1,19 +1,20 @@
 interface Solvers
-    exposes [tryFindZeroPoint,rkSolver,rkSolverM]
+    exposes []
+# exposes [tryFindZeroPoint,rkSolver,rkSolverM]
     imports [Matrix.{MatrixType}]
 
-FunctionType a : ( MatrixType a  -> Frac a )
+FunctionType  a: ( MatrixType a  ->   a )
 
 
 # max step needed
 # add policy when matrix inversion gives horrible result
-tryFindZeroPointInternal : List (FunctionType a),MatrixType a, List (Frac a), MatrixType a, U32,Frac a -> Result (MatrixType a) Str
+tryFindZeroPointInternal : List (FunctionType (Frac a)),MatrixType (Frac a), List (Frac a), MatrixType (Frac a), U32,Frac a -> Result (MatrixType (Frac a)) Str
 tryFindZeroPointInternal = \ functions, startPoint, deltas, directions, iterationsCnt ,hitTolerance ->
     funCnt = List.len functions
     deltasSize = List.len deltas
     directionSizes = Matrix.getSize directions
 
-    adjustSize : MatrixType a, Nat  -> MatrixType a
+    adjustSize : MatrixType (Frac a), Nat  -> MatrixType (Frac a)
     adjustSize = \ mat, maxSize ->
         # if I try to use deltasSize directly crash!
         if List.len mat >= maxSize then
@@ -23,7 +24,7 @@ tryFindZeroPointInternal = \ functions, startPoint, deltas, directions, iteratio
 
     # something  is wrong with scopes when I try to use functions there is  a crash
     # I have to pass it as parameter
-    createAF : List (FunctionType a), MatrixType a,{x : MatrixType a, deltaX: MatrixType a,deltaFun : MatrixType a}, Nat -> Result {x : MatrixType a, deltaX: MatrixType a,deltaFun : MatrixType a} Str
+    createAF : List (FunctionType (Frac a)), MatrixType (Frac a),{x : MatrixType (Frac a), deltaX: MatrixType (Frac a),deltaFun : MatrixType (Frac a)}, Nat -> Result {x : MatrixType (Frac a), deltaX: MatrixType (Frac a),deltaFun : MatrixType (Frac a)} Str
     createAF = \ funLst, pace, statePrev, maxSize ->
         state = { statePrev  &  deltaX: adjustSize statePrev.deltaX maxSize, deltaFun : adjustSize statePrev.deltaFun maxSize}
         if List.len pace == 0 then
@@ -49,7 +50,7 @@ tryFindZeroPointInternal = \ functions, startPoint, deltas, directions, iteratio
                         Err message -> Err message
                 Err message -> Err message
 
-    iteration : List (FunctionType a), {x : MatrixType a, deltaX: MatrixType a,deltaFun : MatrixType a}, U32-> Result (MatrixType a) Str
+    iteration : List (FunctionType (Frac a)), {x : MatrixType (Frac a), deltaX: MatrixType (Frac a),deltaFun : MatrixType (Frac a)}, U32-> Result (MatrixType (Frac a)) Str
     iteration = \ funLst, state, iter ->
         if  iter == 0 then
             Ok state.x
@@ -87,7 +88,7 @@ tryFindZeroPointInternal = \ functions, startPoint, deltas, directions, iteratio
         Err message -> Err message
 
 
-tryFindZeroPoint : List (FunctionType a),MatrixType a, U32, Frac a -> Result (MatrixType a) Str
+tryFindZeroPoint : List (FunctionType (Frac a)),MatrixType (Frac a), U32, Frac a -> Result (MatrixType (Frac a)) Str
 tryFindZeroPoint = \ functions, startPoint, iterationsCnt ,hitTolerance ->
     size = List.len functions
     pointSize = Matrix.getSize startPoint
@@ -132,13 +133,13 @@ rkSolver = \ y, x, h, maxH,err, end , fun, result ->
                 rkSolver (oneStep + y) (x+h) h maxH err end fun (List.append result  (x+h ,oneStep + y))
 
 
-rkSolverM :  MatrixType a, Frac a, Frac a, Frac a, Frac a, Frac a, List (Frac a, MatrixType a -> Frac a), List (Frac a, MatrixType a ) -> Result ( List (Frac a, MatrixType a ) )  Str
+rkSolverM :  MatrixType (Frac a), Frac a, Frac a, Frac a, Frac a, Frac a, List (Frac a, MatrixType (Frac a) -> Frac a), List (Frac a, MatrixType (Frac a) ) -> Result ( List (Frac a, MatrixType (Frac a) ) )  Str
 rkSolverM = \ y, x, h, maxH,err, end , fun, result ->
     if x >= end then
         Ok result
     else
         # again  I have to pass fun as parameter is that correct ??
-        evalIncrement : MatrixType a, Frac a, Frac a, List (Frac a, MatrixType a -> Frac a)-> Result ( MatrixType a ) Str
+        evalIncrement : MatrixType (Frac a), Frac a, Frac a, List (Frac a, MatrixType (Frac a) -> Frac a)-> Result ( MatrixType (Frac a) ) Str
         evalIncrement = \ yi, xi, hi, funLst ->
 
             k1 = Matrix.scalarOp  [List.map funLst (\ funi -> funi xi yi)]  hi Num.mul

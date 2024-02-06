@@ -14,15 +14,12 @@ interface Matrix
         createSingleValue,
         norm,
         unit,
-        gaussElimination,
-        ComplexType]
+        ]
     imports []
 
-MatrixType a : List ( List (Frac a))
+MatrixType a : List ( List (a))
 
-ComplexType a : (Frac a, Frac a)
-
-getMatrixValue : MatrixType a, Nat, Nat -> Result (Frac a) Str
+getMatrixValue : MatrixType a, Nat, Nat -> Result a Str
 getMatrixValue = \ mat, row, col ->
     when List.get mat row is
         Ok rowLst ->
@@ -31,30 +28,6 @@ getMatrixValue = \ mat, row, col ->
                 _ -> Err "wrong col index"
         _ -> Err "wrong row index"
 
-solveFromGauss : MatrixType a, MatrixType a -> Result (MatrixType a) Str
-solveFromGauss = \ b, gauss ->
-    last = List.len (List.join b)
-    List.walkTry (List.reverse  (List.join b)) [] ( \ state, bi ->
-        idx = (last - 1 - (List.len state))
-        when List.get gauss idx is
-            Ok row ->
-                when  List.get row (idx) is
-                    Ok aii ->
-                        List.map2 state (List.reverse row) ( \ xi, ai  ->
-                            -xi * ai
-                        )
-                        |> List.sum
-                        |> ( \ other ->
-                            Ok (List.append  state ((bi + other)/aii))
-                        )
-                    _ -> Err "unexpected size problem"
-
-            _ -> Err "not compatible sizes"
-    )
-    |> (\ unboxed ->
-        when unboxed is
-            Ok unbox -> Ok [ List.reverse unbox]
-            Err message -> Err message)
 
 getSize : MatrixType a -> (Nat, Nat)
 getSize = \ mat ->
@@ -63,8 +36,26 @@ getSize = \ mat ->
         [head, .. as tail] ->
             ( List.len mat, List.len head )
 
-solve : MatrixType a, MatrixType a -> Result (MatrixType a) Str
-solve = \  a, b ->
+solve : MatrixType (Frac a), MatrixType (Frac a) -> Result (MatrixType (Frac a)) Str
+solve = \  aMat, bMat ->
+    op = {
+        greater : Num.isGt,
+        equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
+        isZero : Num.isZero,
+        sub : Num.sub ,
+        mul : Num.mul,
+        div : Num.div,
+        abs : Num.abs,
+        neg : (\a -> -a),
+        sum : (\a, b -> a + b),
+        sumLst : (\ lst -> List.sum lst)
+    }
+    solveInternal aMat bMat op
+    # as far as I am concerned this should work
+    #solveInternal a b opFrec
+
+solveInternal : MatrixType a, MatrixType a, OperationType a -> Result (MatrixType a) Str
+solveInternal = \  a, b, op ->
     sizeA = getSize a
     sizeB = getSize b
 
@@ -79,11 +70,11 @@ solve = \  a, b ->
                 transpose b
         when merge a updatedB 1 is
             Ok glued ->
-                when gaussElimination glued is
+                when gaussElimination glued op is
                     Ok gauss ->
                         when split gauss 1 sizeA.0 is
                             Ok splited ->
-                                solveFromGauss splited.1 splited.0
+                                solveFromGauss splited.1 splited.0 op
                             Err message -> Err message
                     Err message -> Err message
             Err message -> Err message
@@ -139,9 +130,25 @@ merge = \ dest, src, dim ->
                 ))
     else
         Err "inproper dimension"
-
-mul : MatrixType a, MatrixType a -> Result (MatrixType a) Str
+mul : MatrixType (Frac a), MatrixType (Frac a) -> Result (MatrixType (Frac a)) Str
 mul = \ left, right ->
+    op = {
+        greater : Num.isGt,
+        equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
+        isZero : Num.isZero,
+        sub : Num.sub ,
+        mul : Num.mul,
+        div : Num.div,
+        abs : Num.abs,
+        neg : (\a -> -a),
+        sum : (\a, b -> a + b),
+        sumLst : (\ lst -> List.sum lst)
+    }
+
+    mulInternal left right op
+
+mulInternal : MatrixType a, MatrixType a, OperationType a -> Result (MatrixType a) Str
+mulInternal = \ left, right, op ->
     sizeLeft = getSize left
     sizeRigh = getSize right
 
@@ -153,15 +160,15 @@ mul = \ left, right ->
                     (List.walk transp [] ( \ outRow, col ->
                         List.append  outRow (
                         List.map2 row  col (\ elem1, elem2 ->
-                            elem1 * elem2
+                            op.mul elem1 elem2
                         )
-                        |> List.sum )
+                        |> op.sumLst )
                     )) )
             ) )
     else
         Err "Incompatible sizes"
 
-print : MatrixType a -> Str
+print : MatrixType (Frac a) -> Str
 print = \ mat ->
     adjustFront : Str, Str, Nat -> Str
     adjustFront = \ str, filler, cnt ->
@@ -208,8 +215,24 @@ print = \ mat ->
         )
     )
 
-inverse : MatrixType a -> Result (MatrixType a)  Str
+inverse : MatrixType (Frac a) -> Result (MatrixType (Frac a))  Str
 inverse = \ mat ->
+    op = {
+        greater : Num.isGt,
+        equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
+        isZero : Num.isZero,
+        sub : Num.sub ,
+        mul : Num.mul,
+        div : Num.div,
+        abs : Num.abs,
+        neg : (\a -> -a),
+        sum : (\a, b -> a + b),
+        sumLst : (\ lst -> List.sum lst)
+    }
+    inverseInternal mat (Num.toFrac 0) (Num.toFrac 1) op
+
+inverseInternal : MatrixType a, a, a, OperationType a -> Result (MatrixType a)  Str
+inverseInternal = \ mat, zero, one, op ->
     size = getSize mat
     if size.0 == size.1 then
         iterate : MatrixType a, Nat -> Result (MatrixType a)  Str
@@ -218,11 +241,11 @@ inverse = \ mat ->
                 Ok out
             else
                 current =
-                    List.repeat 0 size.1
-                    |> List.set cnt 1
-                when (create [current] Num.toFrac) is
+                    List.repeat zero size.1
+                    |> List.set cnt one
+                when (create [current] (\a -> a)) is
                     Ok iterB ->
-                        when solve mat iterB is
+                        when solveInternal mat iterB op is
                             Ok result ->
                                 when out is
                                     [] -> iterate (transpose result) (cnt + 1)
@@ -237,9 +260,9 @@ inverse = \ mat ->
     else
         Err "matrix must be square"
 
-create : List (List (Num a)), (Num a -> Frac b) -> Result (MatrixType b) Str
+create : List (List a), (a -> b) -> Result (MatrixType b) Str
 create = \ seedLst, convert ->
-    conversion : (List (Num a)) -> List (Frac b )
+    conversion : (List  a) -> List b
     conversion = \ lst ->
         List.map lst (\elem -> convert elem )
 
@@ -253,16 +276,16 @@ create = \ seedLst, convert ->
                     Err "wrong size can't create matrix"
     )
 
-createSingleValue : Frac a, Nat, Nat -> MatrixType a
+createSingleValue : a, Nat, Nat -> MatrixType a
 createSingleValue = \ val, rowCnt, colCnt ->
     List.repeat (List.repeat val colCnt) rowCnt
 
-scalarOp : MatrixType a, Frac a, (Frac a, Frac a -> Frac a) -> MatrixType a
+scalarOp : MatrixType a,  a, ( a,  a ->  a) -> MatrixType a
 scalarOp = \ mat, val, op ->
     List.map mat ( \ row ->
         List.map row ( \ elem -> op elem val ) )
 
-elemWiseOp : MatrixType a, MatrixType a, (Frac a, Frac a -> Frac a) -> Result (MatrixType a) Str
+elemWiseOp : MatrixType a, MatrixType a, ( a,  a ->  a) -> Result (MatrixType a) Str
 elemWiseOp = \ left, right, op ->
     if getSize left != getSize right then
         Err "wrong matrices sizes"
@@ -274,8 +297,7 @@ elemWiseOp = \ left, right, op ->
                 )
         ))
 
-
-norm : MatrixType a -> Frac  a
+norm : MatrixType (Frac a) -> Frac a
 norm = \ mat ->
     List.map  mat  (\ row  ->
         List.map row (\val -> Num.abs val )
@@ -283,13 +305,16 @@ norm = \ mat ->
     )
     |> List.sum
 
-unit : Nat -> MatrixType a
+unit : Nat -> MatrixType (Frac a)
 unit = \ size ->
-    row =
-        List.concat  [1]  (List.repeat 0 (size - 1))
-        |> List.map (\ val -> Num.toFrac val)
+    unitInternal size (Num.toFrac 0) (Num.toFrac 1)
 
-    replicate : MatrixType a, List (Frac a ), Nat -> MatrixType a
+unitInternal : Nat, a, a -> MatrixType a
+unitInternal = \ size, zero, one ->
+    row =
+        List.concat  [one]  (List.repeat zero (size - 1))
+
+    replicate : MatrixType a, List a , Nat -> MatrixType a
     replicate = \ in, currentRow,  cnt ->
         if cnt == 0 then
             in
@@ -308,26 +333,32 @@ OperationType a: {
     mul : (a, a -> a),
     div : (a, a -> a),
     abs : (a -> a),
+    neg : (a -> a),
+    sum : (a, a -> a),
+    sumLst : (List a ->  a ),
 }
 
-#
-# Num.isGt
-#
-gaussElimination : MatrixType a  -> Result (MatrixType a) Str
-gaussElimination = \ mat ->
-    op = {
-        greater : Num.isGt,
-        equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
-        isZero : Num.isZero,
-        sub : Num.sub ,
-        mul : Num.mul,
-        div : (\ a, b ->
-                    Num.div a b),
-        abs : Num.abs,
-    }
+opFrec : OperationType (Frac a)
+opFrec = {
+    greater : Num.isGt,
+    equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
+    isZero : Num.isZero,
+    sub : Num.sub ,
+    mul : Num.mul,
+    div : Num.div,
+    abs : Num.abs,
+    neg : (\a -> -a),
+    sum : (\a, b -> a + b),
+    sumLst : (\ lst -> List.sum lst),
+}
+# #
+# # Num.isGt
+# #
+gaussElimination : MatrixType a, OperationType a -> Result (MatrixType a) Str
+gaussElimination = \ mat, op ->
     gaussEliminationInternal mat [] op
 
-gaussEliminationInternal : List (List a), List (List a), OperationType a -> Result (List (List a)) Str
+gaussEliminationInternal : MatrixType a, MatrixType a, OperationType a -> Result (MatrixType a) Str
 gaussEliminationInternal = \ mat, tmp, operations ->
 
     sorter : List a, List  a, OperationType a -> [ LT, EQ, GT ]
@@ -376,3 +407,28 @@ gaussEliminationInternal = \ mat, tmp, operations ->
                             Err message -> Err message
                     )
                 _ -> Err "operation can't be performed on this matrix"
+
+solveFromGauss : List (List a), List (List a), OperationType a -> Result (List (List a)) Str
+solveFromGauss = \ b, gauss, operations ->
+    last = List.len (List.join b)
+    List.walkTry (List.reverse  (List.join b)) [] ( \ state, bi ->
+        idx = (last - 1 - (List.len state))
+        when List.get gauss idx is
+            Ok row ->
+                when  List.get row (idx) is
+                    Ok aii ->
+                        List.map2 state (List.reverse row) ( \ xi, ai  ->
+                            operations.mul (operations.neg xi) ai
+                        )
+                        |> operations.sumLst
+                        |> ( \ other ->
+                            Ok (List.append  state (operations.div (operations.sum bi other) aii))
+                        )
+                    _ -> Err "unexpected size problem"
+
+            _ -> Err "not compatible sizes"
+    )
+    |> (\ unboxed ->
+        when unboxed is
+            Ok unbox -> Ok [ List.reverse unbox]
+            Err message -> Err message)

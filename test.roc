@@ -13,41 +13,41 @@ app "peek"
     provides [main] to pf
 
 
-gg = \ x, mat ->
-    when mat is
-        [lst] ->
-            when lst is
-                [y1, y2] ->
-                    y2
-                _-> 0
-        _ -> 0
+# gg = \ x, mat ->
+#     when mat is
+#         [lst] ->
+#             when lst is
+#                 [y1, y2] ->
+#                     y2
+#                 _-> 0
+#         _ -> 0
 
-ff = \ x, mat ->
-    when mat is
-        [lst] ->
-            when lst is
-                [y1, y2] ->
-                    -( Num.sin y1) * y2
-                _-> 0
-        _ -> 0
+# ff = \ x, mat ->
+#     when mat is
+#         [lst] ->
+#             when lst is
+#                 [y1, y2] ->
+#                     -( Num.sin y1) * y2
+#                 _-> 0
+#         _ -> 0
 
-f = \ mat ->
-    when mat is
-        [lst] ->
-            when lst is
-                [x,r] ->
-                    -r * x + Num.sin x
-                _-> 0
-        _ -> 0
+# f = \ mat ->
+#     when mat is
+#         [lst] ->
+#             when lst is
+#                 [x,r] ->
+#                     -r * x + Num.sin x
+#                 _-> 0
+#         _ -> 0
 
-g = \ mat ->
-    when mat is
-        [lst] ->
-            when lst is
-                [x,r] ->
-                    r - Num.cos x
-                _-> 0
-        _ -> 0
+# g = \ mat ->
+#     when mat is
+#         [lst] ->
+#             when lst is
+#                 [x,r] ->
+#                     r - Num.cos x
+#                 _-> 0
+#         _ -> 0
 
 main =
     # dbg Complex.print ( Complex.div (1.1f64,-1f64)  (3.2f64, 3.9f64) )
@@ -81,7 +81,7 @@ main =
     #                 (Matrix.print tada)
     #             Err message -> message
 
-    # bb = Matrix.create [[1, 1, 3, 2, -1]]  Num.toF64
+    bb = Matrix.create [[1, 1, 3, 2, -1]]  Num.toF64
     matiRes  = Matrix.create [[3, 4, 1],[ -4, 1, 8],[-1  , -3, 5]] Num.toF64
     ggg =
         when matiRes is
