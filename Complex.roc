@@ -5,6 +5,7 @@ interface Complex
         mul,
         div,
         conj,
+        neg,
         print,
         ComplexType]
     imports []
@@ -75,7 +76,5 @@ imag = \ a ->
 div : ComplexType a, ComplexType a -> ComplexType a
 div = \ a, b ->
     bConj = conj b
-    dbg  (real (mul b  bConj))
-    dbg  (real (mul a bConj) )
     ( (real (mul a bConj) )/ (real (mul b  bConj)), (imag (mul a bConj) )/ (real (mul b bConj)))
 

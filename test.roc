@@ -81,14 +81,13 @@ main =
     #                 (Matrix.print tada)
     #             Err message -> message
 
-    bb = Matrix.create [[1, 1, 3, 2, -1]]  Num.toF64
-    matiRes  = Matrix.create [[3, 4, 1],[ -4, 1, 8],[-1  , -3, 5]] Num.toF64
+    matiRes  = Matrix.create [[(3,0), (4,0), (1,0)],[ (-4,0), (1,0), (8,0)],[(-1,0)  , (-3,0), (5,0)]] (\ a-> (Num.toF64 a.0, Num.toF64 a.1))
     ggg =
         when matiRes is
             Ok  mati ->
-                when Matrix.solve mati  [[1  , 2,  7]] is
+                when Matrix.solveC mati  [[(1f64,0f64)  , (2f64,0f64),  (0f64,7f64)]] is
                         Ok h ->
-                            Matrix.print h
+                            Matrix.printC h
 
                         Err message -> message
             Err message -> message

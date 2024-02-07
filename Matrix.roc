@@ -1,7 +1,9 @@
 interface Matrix
     exposes [
         print,
+        printC,
         solve,
+        solveC,
         mul,
         transpose,
         elemWiseOp,
@@ -15,7 +17,7 @@ interface Matrix
         norm,
         unit,
         ]
-    imports []
+    imports [ Complex.{ComplexType} ]
 
 MatrixType a : List ( List (a))
 
@@ -39,20 +41,37 @@ getSize = \ mat ->
 solve : MatrixType (Frac a), MatrixType (Frac a) -> Result (MatrixType (Frac a)) Str
 solve = \  aMat, bMat ->
     op = {
-        greater : Num.isGt,
+        greater : (\ a, b ->  Num.isGt (Num.abs a) (Num.abs b)),
         equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
         isZero : Num.isZero,
         sub : Num.sub ,
         mul : Num.mul,
         div : Num.div,
-        abs : Num.abs,
         neg : (\a -> -a),
         sum : (\a, b -> a + b),
         sumLst : (\ lst -> List.sum lst)
     }
     solveInternal aMat bMat op
     # as far as I am concerned this should work
+    # otential bug
     #solveInternal a b opFrec
+
+solveC : MatrixType (ComplexType a), MatrixType (ComplexType a) -> Result (MatrixType (ComplexType a)) Str
+solveC = \  aMat, bMat ->
+    op = {
+        greater : (\ a, b ->  Num.isGt ((Num.abs a.0) + (Num.abs a.1)) ((Num.abs b.0) + (Num.abs b.1))),
+        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.00001 }) && (Num.isApproxEq  a.1 b.1 {rtol :0.00001 })),
+        isZero : (\ a -> ( Num.isZero  a.0 ) && ( Num.isZero  a.1 )),
+        sub : Complex.sub,
+        mul : Complex.mul,
+        div : Complex.div,
+        neg : Complex.neg,
+        sum : Complex.add,
+        sumLst : (\ lst -> List.walk lst (0.0,0.0)
+            (\ state, elem->
+                (state.0 + elem.0, state.1 + elem.1)  ) ),
+    }
+    solveInternal aMat bMat op
 
 solveInternal : MatrixType a, MatrixType a, OperationType a -> Result (MatrixType a) Str
 solveInternal = \  a, b, op ->
@@ -133,19 +152,37 @@ merge = \ dest, src, dim ->
 mul : MatrixType (Frac a), MatrixType (Frac a) -> Result (MatrixType (Frac a)) Str
 mul = \ left, right ->
     op = {
-        greater : Num.isGt,
+        greater : (\ a, b ->  Num.isGt (Num.abs a) (Num.abs b)),
         equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
         isZero : Num.isZero,
         sub : Num.sub ,
         mul : Num.mul,
         div : Num.div,
-        abs : Num.abs,
         neg : (\a -> -a),
         sum : (\a, b -> a + b),
         sumLst : (\ lst -> List.sum lst)
     }
 
     mulInternal left right op
+
+mulC : MatrixType (ComplexType a), MatrixType (ComplexType a) -> Result (MatrixType (ComplexType a)) Str
+mulC = \ left, right ->
+    op = {
+        greater : (\ a, b ->  Num.isGt ((Num.abs a.0) + (Num.abs a.1)) ((Num.abs b.0) + (Num.abs b.1))),
+        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.00001 }) && (Num.isApproxEq  a.1 b.1 {rtol :0.00001 })),
+        isZero : (\ a -> ( Num.isZero  a.0 ) && ( Num.isZero  a.1 )),
+        sub : Complex.sub,
+        mul : Complex.mul,
+        div : Complex.div,
+        neg : Complex.neg,
+        sum : Complex.add,
+        sumLst : (\ lst -> List.walk lst (0.0,0.0)
+            (\ state, elem->
+                (state.0 + elem.0, state.1 + elem.1)  ) ),
+    }
+
+    mulInternal left right op
+
 
 mulInternal : MatrixType a, MatrixType a, OperationType a -> Result (MatrixType a) Str
 mulInternal = \ left, right, op ->
@@ -167,6 +204,24 @@ mulInternal = \ left, right, op ->
             ) )
     else
         Err "Incompatible sizes"
+
+
+printC : MatrixType (ComplexType a) -> Str
+printC = \ mat ->
+    strMat =
+        List.map mat ( \ row ->
+            List.map row  (\ elem ->
+                (Complex.print  elem )
+            )
+        )
+
+    List.walk strMat "" (\ outStr, row ->
+        List.walk row (Str.concat outStr "\n")  (\ inStr, str ->
+            inStr
+            |> Str.concat str
+            |> Str.concat "  "
+        )
+    )
 
 print : MatrixType (Frac a) -> Str
 print = \ mat ->
@@ -218,18 +273,35 @@ print = \ mat ->
 inverse : MatrixType (Frac a) -> Result (MatrixType (Frac a))  Str
 inverse = \ mat ->
     op = {
-        greater : Num.isGt,
+        greater : (\ a, b ->  Num.isGt (Num.abs a) (Num.abs b)),
         equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
         isZero : Num.isZero,
         sub : Num.sub ,
         mul : Num.mul,
         div : Num.div,
-        abs : Num.abs,
         neg : (\a -> -a),
         sum : (\a, b -> a + b),
         sumLst : (\ lst -> List.sum lst)
     }
     inverseInternal mat (Num.toFrac 0) (Num.toFrac 1) op
+
+inverseC : MatrixType (ComplexType a) -> Result (MatrixType (ComplexType a))  Str
+inverseC = \ mat ->
+    # this is horrible that I have to repeat this over and over
+    op = {
+        greater : (\ a, b ->  Num.isGt ((Num.abs a.0) + (Num.abs a.1)) ((Num.abs b.0) + (Num.abs b.1))),
+        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.00001 }) && (Num.isApproxEq  a.1 b.1 {rtol :0.00001 })),
+        isZero : (\ a -> ( Num.isZero  a.0 ) && ( Num.isZero  a.1 )),
+        sub : Complex.sub,
+        mul : Complex.mul,
+        div : Complex.div,
+        neg : Complex.neg,
+        sum : Complex.add,
+        sumLst : (\ lst -> List.walk lst (0.0,0.0)
+            (\ state, elem->
+                (state.0 + elem.0, state.1 + elem.1)  ) ),
+    }
+    inverseInternal mat (Num.toFrac 0,Num.toFrac 0) (Num.toFrac 1,Num.toFrac 1) op
 
 inverseInternal : MatrixType a, a, a, OperationType a -> Result (MatrixType a)  Str
 inverseInternal = \ mat, zero, one, op ->
@@ -332,7 +404,6 @@ OperationType a: {
     sub : (a, a -> a),
     mul : (a, a -> a),
     div : (a, a -> a),
-    abs : (a -> a),
     neg : (a -> a),
     sum : (a, a -> a),
     sumLst : (List a ->  a ),
@@ -340,17 +411,32 @@ OperationType a: {
 
 opFrec : OperationType (Frac a)
 opFrec = {
-    greater : Num.isGt,
+    greater : (\ a, b ->  Num.isGt (Num.abs a) (Num.abs b)),
     equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
     isZero : Num.isZero,
     sub : Num.sub ,
     mul : Num.mul,
     div : Num.div,
-    abs : Num.abs,
     neg : (\a -> -a),
     sum : (\a, b -> a + b),
     sumLst : (\ lst -> List.sum lst),
 }
+
+opComplex : OperationType (ComplexType a)
+opComplex = {
+    greater : (\ a, b ->  Num.isGt ((Num.abs a.0) + (Num.abs a.1)) ((Num.abs b.0) + (Num.abs b.1))),
+    equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.00001 }) && (Num.isApproxEq  a.1 b.1 {rtol :0.00001 })),
+    isZero : (\ a -> ( Num.isZero  a.0 ) && ( Num.isZero  a.1 )),
+    sub : Complex.sub,
+    mul : Complex.mul,
+    div : Complex.div,
+    neg : Complex.neg,
+    sum : Complex.add,
+    sumLst : (\ lst -> List.walk lst (0.0,0.0)
+        (\ state, elem->
+            (state.0 + elem.0, state.1 + elem.1)  ) ),
+}
+
 # #
 # # Num.isGt
 # #
@@ -365,7 +451,7 @@ gaussEliminationInternal = \ mat, tmp, operations ->
     sorter = \ left, right, op ->
             when (List.get left line, List.get right line) is
                 (Ok leftElem, Ok  rightElem) ->
-                    if (op.greater (op.abs rightElem) (op.abs leftElem)) then
+                    if (op.greater rightElem leftElem) then
                         GT
                     else if op.equal rightElem leftElem then
                         EQ
