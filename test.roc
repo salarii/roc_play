@@ -81,33 +81,58 @@ main =
     #                 (Matrix.print tada)
     #             Err message -> message
 
-    matiRes  = Matrix.create [[(3,0), (4,0), (1,0)],[ (-4,0), (1,0), (8,0)],[(-1,0)  , (-3,0), (5,0)]] (\ a-> (Num.toF64 a.0, Num.toF64 a.1))
-    ggg =
-        when matiRes is
-            Ok  mati ->
-                when Matrix.solveC mati  [[(1f64,0f64)  , (2f64,0f64),  (0f64,7f64)]] is
-                        Ok h ->
-                            Matrix.printC h
+    # matiRes  = Matrix.create [[(3,0), (4,0), (1,0)],[ (-4,0), (1,0), (8,0)],[(-1,0)  , (-3,0), (5,0)]] (\ a-> (Num.toF64 a.0, Num.toF64 a.1))
+    # ggg =
+    #     when matiRes is
+    #         Ok  mati ->
+    #             when Matrix.solveC mati  [[(1f64,0f64)  , (2f64,0f64),  (0f64,7f64)]] is
+    #                     Ok h ->
+    #                         Matrix.printC h
 
-                        Err message -> message
-            Err message -> message
+    #                     Err message -> message
+    #         Err message -> message
+    # a = [[(1f64,-2f64),(4f64,-1f64)],[(-1f64,-2f64),(1f64,1f64)]]
+    # b = [[(2f64,-2f64),(1f64,-1f64)],[(3f64,-2f64),(4f64,1f64)]]
+    # gg =
+    #     when (Matrix.inverseC  a  ) is
+    #         Ok  ml ->
+    #             Matrix.printC  ml
+    #         Err message -> message
+
+    b = [[(1f64,0f64),(3f64,0f64)],[(1f64,0f64),(2f64,0f64)]]
 
     # gg =
-    #     when (Matrix.create [[1, 0, 1, 0],[ 3, 3, 7, 1 ],[ -1,2,2, 0],[ -2,1,1, 0]] Num.toF64) is
-    #         Ok tada ->
-    #             when Matrix.inverse  tada  is
-    #                 Ok inv ->
-    #                     dbg inv
-    #                     (Matrix.print inv)
+    #     when Matrix.inverseC b   is
+    #         Ok ddd ->
+    #             when Matrix.mulC  ddd  b  is
+    #                 Ok ggc->
+    #                     dbg ddd
+    #                     Matrix.printC ggc
     #                 Err message -> message
     #         Err message -> message
+    gg =
+        when (Matrix.create [[6, 5.5f64,-1],[5.5f64, 1,-2],[-1,-2,-3]] Num.toF64) is
+            Ok tada ->
+                when Matrix.findEigenValuesC b 10 is
+                    Ok eig ->
+                        when Matrix.powerMethodC b eig 10 is
+                            Ok vec ->
+                                dbg  vec
+                                "done"
+                            Err message ->  message
+                        # when (Matrix.mulC  qr.0 qr.1 ) is
+                        #     Ok  ml ->
+                        #         Matrix.printC ml
+                        #     Err message -> message
+                    Err message -> message
+            Err message -> message
 
     #_ <- Stdout.line (Matrix.print (Matrix.unit 20 )) |> Task.await
     # _ <- Stdout.line out  |> Task.await
     # _ <- File.writeUtf8 outFilename str2 |> Task.attempt
     # _ <- Stdout.line str |> Task.await
     # _ <- Stdout.line "\n\n\n" |> Task.await
-    _ <- Stdout.line ggg |> Task.await
+    _ <- Stdout.line gg |> Task.await
     Stdout.line "test  ok"
 
 

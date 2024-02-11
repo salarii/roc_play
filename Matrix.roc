@@ -5,21 +5,29 @@ interface Matrix
         solve,
         solveC,
         mul,
+        mulC,
         transpose,
         elemWiseOp,
         create,
         merge,
         inverse,
+        inverseC,
         getSize,
         split,
         scalarOp,
         createSingleValue,
         norm,
         unit,
+        findEigenValues,
+        findEigenValuesC,
+        qrDecompositionC,
+        powerMethodC,
         ]
     imports [ Complex.{ComplexType} ]
 
 MatrixType a : List ( List (a))
+# I can't just use it when it applies.
+compSet = {rtol :0.0001 ,atol : 0.00001 }
 
 getMatrixValue : MatrixType a, Nat, Nat -> Result a Str
 getMatrixValue = \ mat, row, col ->
@@ -42,14 +50,19 @@ solve : MatrixType (Frac a), MatrixType (Frac a) -> Result (MatrixType (Frac a))
 solve = \  aMat, bMat ->
     op = {
         greater : (\ a, b ->  Num.isGt (Num.abs a) (Num.abs b)),
-        equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
+        equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.0001 ,atol : 0.00001  }),
         isZero : Num.isZero,
         sub : Num.sub ,
         mul : Num.mul,
         div : Num.div,
         neg : (\a -> -a),
         sum : (\a, b -> a + b),
-        sumLst : (\ lst -> List.sum lst)
+        sumLst : (\ lst -> List.sum lst),
+        len : (\ lst ->
+            List.map lst (\ a -> a * a )
+            |> List.sum
+            |> Num.sqrt
+            ),
     }
     solveInternal aMat bMat op
     # as far as I am concerned this should work
@@ -60,7 +73,7 @@ solveC : MatrixType (ComplexType a), MatrixType (ComplexType a) -> Result (Matri
 solveC = \  aMat, bMat ->
     op = {
         greater : (\ a, b ->  Num.isGt ((Num.abs a.0) + (Num.abs a.1)) ((Num.abs b.0) + (Num.abs b.1))),
-        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.00001 }) && (Num.isApproxEq  a.1 b.1 {rtol :0.00001 })),
+        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.0001 ,atol : 0.00001  }) && (Num.isApproxEq  a.1 b.1 {rtol :0.0001 ,atol : 0.00001  })),
         isZero : (\ a -> ( Num.isZero  a.0 ) && ( Num.isZero  a.1 )),
         sub : Complex.sub,
         mul : Complex.mul,
@@ -70,6 +83,15 @@ solveC = \  aMat, bMat ->
         sumLst : (\ lst -> List.walk lst (0.0,0.0)
             (\ state, elem->
                 (state.0 + elem.0, state.1 + elem.1)  ) ),
+        len : (\ lst ->
+            len =
+                List.map lst (\ a ->
+                    (Complex.mul a (Complex.conj a )).0
+                    |> Num.abs )
+                |> List.sum
+                |> Num.sqrt
+            (len, 0)
+            ),
     }
     solveInternal aMat bMat op
 
@@ -153,23 +175,30 @@ mul : MatrixType (Frac a), MatrixType (Frac a) -> Result (MatrixType (Frac a)) S
 mul = \ left, right ->
     op = {
         greater : (\ a, b ->  Num.isGt (Num.abs a) (Num.abs b)),
-        equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
+        equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.0001 ,atol : 0.00001  } ),
         isZero : Num.isZero,
         sub : Num.sub ,
         mul : Num.mul,
         div : Num.div,
         neg : (\a -> -a),
         sum : (\a, b -> a + b),
-        sumLst : (\ lst -> List.sum lst)
+        sumLst : (\ lst -> List.sum lst),
+        len : (\ lst ->
+            List.map lst (\ a -> a * a )
+            |> List.sum
+            |> Num.sqrt
+            ),
     }
 
     mulInternal left right op
 
 mulC : MatrixType (ComplexType a), MatrixType (ComplexType a) -> Result (MatrixType (ComplexType a)) Str
 mulC = \ left, right ->
+    # again horrible ,why I have to do that??
+    # I want to asign opComplex or opFrec here
     op = {
         greater : (\ a, b ->  Num.isGt ((Num.abs a.0) + (Num.abs a.1)) ((Num.abs b.0) + (Num.abs b.1))),
-        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.00001 }) && (Num.isApproxEq  a.1 b.1 {rtol :0.00001 })),
+        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.0001 ,atol : 0.00001  }) && (Num.isApproxEq  a.1 b.1 {rtol :0.0001 ,atol : 0.00001  })),
         isZero : (\ a -> ( Num.isZero  a.0 ) && ( Num.isZero  a.1 )),
         sub : Complex.sub,
         mul : Complex.mul,
@@ -179,6 +208,15 @@ mulC = \ left, right ->
         sumLst : (\ lst -> List.walk lst (0.0,0.0)
             (\ state, elem->
                 (state.0 + elem.0, state.1 + elem.1)  ) ),
+        len : (\ lst ->
+            len =
+                List.map lst (\ a ->
+                    (Complex.mul a (Complex.conj a )).0
+                    |> Num.abs )
+                |> List.sum
+                |> Num.sqrt
+            (len, 0)
+            ),
     }
 
     mulInternal left right op
@@ -272,16 +310,23 @@ print = \ mat ->
 
 inverse : MatrixType (Frac a) -> Result (MatrixType (Frac a))  Str
 inverse = \ mat ->
+    # again horrible ,why I have to do that??
+    # I want to asign opComplex or opFrec here
     op = {
         greater : (\ a, b ->  Num.isGt (Num.abs a) (Num.abs b)),
-        equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
+        equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.0001 ,atol : 0.00001  } ),
         isZero : Num.isZero,
         sub : Num.sub ,
         mul : Num.mul,
         div : Num.div,
         neg : (\a -> -a),
         sum : (\a, b -> a + b),
-        sumLst : (\ lst -> List.sum lst)
+        sumLst : (\ lst -> List.sum lst),
+        len : (\ lst ->
+            List.map lst (\ a -> a * a )
+            |> List.sum
+            |> Num.sqrt
+            ),
     }
     inverseInternal mat (Num.toFrac 0) (Num.toFrac 1) op
 
@@ -290,7 +335,7 @@ inverseC = \ mat ->
     # this is horrible that I have to repeat this over and over
     op = {
         greater : (\ a, b ->  Num.isGt ((Num.abs a.0) + (Num.abs a.1)) ((Num.abs b.0) + (Num.abs b.1))),
-        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.00001 }) && (Num.isApproxEq  a.1 b.1 {rtol :0.00001 })),
+        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.0001 ,atol : 0.00001  }) && (Num.isApproxEq  a.1 b.1 {rtol :0.0001 ,atol : 0.00001  })),
         isZero : (\ a -> ( Num.isZero  a.0 ) && ( Num.isZero  a.1 )),
         sub : Complex.sub,
         mul : Complex.mul,
@@ -300,8 +345,17 @@ inverseC = \ mat ->
         sumLst : (\ lst -> List.walk lst (0.0,0.0)
             (\ state, elem->
                 (state.0 + elem.0, state.1 + elem.1)  ) ),
+        len : (\ lst ->
+            len =
+                List.map lst (\ a ->
+                    (Complex.mul a (Complex.conj a )).0
+                    |> Num.abs )
+                |> List.sum
+                |> Num.sqrt
+            (len, 0)
+            ),
     }
-    inverseInternal mat (Num.toFrac 0,Num.toFrac 0) (Num.toFrac 1,Num.toFrac 1) op
+    inverseInternal mat (Num.toFrac 0,Num.toFrac 0) (Num.toFrac 1,Num.toFrac 0) op
 
 inverseInternal : MatrixType a, a, a, OperationType a -> Result (MatrixType a)  Str
 inverseInternal = \ mat, zero, one, op ->
@@ -407,12 +461,13 @@ OperationType a: {
     neg : (a -> a),
     sum : (a, a -> a),
     sumLst : (List a ->  a ),
+    len : (List a -> a ),
 }
 
 opFrec : OperationType (Frac a)
 opFrec = {
     greater : (\ a, b ->  Num.isGt (Num.abs a) (Num.abs b)),
-    equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.00001 } ),
+    equal : (\ a, b -> Num.isApproxEq  a b {rtol :0.0001 ,atol : 0.00001  } ),
     isZero : Num.isZero,
     sub : Num.sub ,
     mul : Num.mul,
@@ -420,12 +475,17 @@ opFrec = {
     neg : (\a -> -a),
     sum : (\a, b -> a + b),
     sumLst : (\ lst -> List.sum lst),
+    len : (\ lst ->
+        List.map lst (\ a -> a * a )
+        |> List.sum
+        |> Num.sqrt
+        ),
 }
 
 opComplex : OperationType (ComplexType a)
 opComplex = {
     greater : (\ a, b ->  Num.isGt ((Num.abs a.0) + (Num.abs a.1)) ((Num.abs b.0) + (Num.abs b.1))),
-    equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.00001 }) && (Num.isApproxEq  a.1 b.1 {rtol :0.00001 })),
+    equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.0001 ,atol : 0.00001  }) && (Num.isApproxEq  a.1 b.1 {rtol :0.0001 ,atol : 0.00001  })),
     isZero : (\ a -> ( Num.isZero  a.0 ) && ( Num.isZero  a.1 )),
     sub : Complex.sub,
     mul : Complex.mul,
@@ -435,11 +495,17 @@ opComplex = {
     sumLst : (\ lst -> List.walk lst (0.0,0.0)
         (\ state, elem->
             (state.0 + elem.0, state.1 + elem.1)  ) ),
+    len : (\ lst ->
+        len =
+            List.map lst (\ a ->
+                (Complex.mul a (Complex.conj a )).0
+                |> Num.abs )
+            |> List.sum
+            |> Num.sqrt
+        (len, 0)
+        ),
 }
 
-# #
-# # Num.isGt
-# #
 gaussElimination : MatrixType a, OperationType a -> Result (MatrixType a) Str
 gaussElimination = \ mat, op ->
     gaussEliminationInternal mat [] op
@@ -518,3 +584,211 @@ solveFromGauss = \ b, gauss, operations ->
         when unboxed is
             Ok unbox -> Ok [ List.reverse unbox]
             Err message -> Err message)
+
+
+qInternal : MatrixType a, OperationType a -> MatrixType a
+qInternal = \  mat, operations ->
+    transp = Matrix.transpose mat
+
+    List.walk transp [] ( \ state, vec ->
+            List.map state (\  prevVec ->
+                mod =
+                    List.map2 vec prevVec  (\ a, b  ->
+                        operations.mul a b
+                        )
+                    |> operations.sumLst
+                List.map prevVec (\ elem -> operations.mul elem mod )
+                )
+            |> List.walk vec (\ remainVec, subVec  ->
+                List.map2 remainVec subVec  (\ a, b ->
+                    operations.sub a b
+                    )
+            )
+            |> ( \ orto ->
+                nextVec = List.map orto (\ elem ->
+                    operations.div elem (operations.len orto)
+                    )
+                List.append state nextVec
+                )
+        )
+    |> transpose
+
+
+qrDecompositionC : MatrixType (ComplexType a) -> Result (MatrixType (ComplexType a), MatrixType (ComplexType a)) Str
+qrDecompositionC = \  mat ->
+    # again horrible ,why I have to do that??
+    # I want to asign opComplex or opFrec here
+    op = {
+        greater : (\ a, b ->  Num.isGt ((Num.abs a.0) + (Num.abs a.1)) ((Num.abs b.0) + (Num.abs b.1))),
+        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.0001 ,atol : 0.00001  }) && (Num.isApproxEq  a.1 b.1 {rtol :0.0001 ,atol : 0.00001  })),
+        isZero : (\ a -> ( Num.isZero  a.0 ) && ( Num.isZero  a.1 )),
+        sub : Complex.sub,
+        mul : Complex.mul,
+        div : Complex.div,
+        neg : Complex.neg,
+        sum : Complex.add,
+        sumLst : (\ lst -> List.walk lst (0.0,0.0)
+            (\ state, elem->
+                (state.0 + elem.0, state.1 + elem.1)  ) ),
+        len : (\ lst ->
+            len =
+                List.map lst (\ a ->
+                    (Complex.mul a (Complex.conj a )).0
+                    |> Num.abs )
+                |> List.sum
+                |> Num.sqrt
+            (len, 0)
+            ),
+    }
+    q = qInternal mat op
+    when inverseC  q is
+        Ok invQ ->
+            when mulC invQ mat  is
+                Ok r ->
+                    Ok  ( q, r )
+                Err message -> Err message
+        Err message -> Err message
+
+isUppTriangMatrix : MatrixType a, OperationType a, a -> Bool
+isUppTriangMatrix = \  mat, operations, zero ->
+    size = getSize (Matrix.transpose mat)
+    if size.0 < 2 || size.1 < 2 then
+        Bool.false
+    else
+        List.walk (Matrix.transpose mat) (Bool.true, 1) (\ triang, col ->
+            isZero =
+                List.takeLast col (size.0 - triang.1)
+                |> List.walk triang.0 ( \ flag, val  ->
+                    flag && (operations.equal val zero) )
+            (isZero, triang.1 + 1)
+        )
+        |> (\ result ->
+            result.0)
+
+diagonal : MatrixType a -> Result (List a) Str
+diagonal = \ mat ->
+    List.walkTry mat ([],0) (\ diag, row  ->
+        when List.get row  diag.1 is
+            Ok elem ->
+                Ok (List.append diag.0 elem, diag.1 + 1)
+            Err _ -> Err "matrix is not square"
+        )
+    |> (\ diagResult ->
+        when diagResult is
+            Ok diag -> Ok diag.0
+            Err message -> Err message )
+
+findEigenValues : MatrixType (Frac a), Nat ->  Result (List (ComplexType a))  Str
+findEigenValues = \ mat, iter ->
+    complexMat =
+        List.map mat ( \ row ->
+            List.map row (\ elem -> (elem, Num.toFrac 0 ) ) )
+    findEigenValuesC complexMat iter
+
+# add shift for oscillating cases
+# detect and read complex values
+findEigenValuesC : MatrixType (ComplexType a), Nat ->  Result (List (ComplexType a))  Str
+findEigenValuesC = \ mat, iter ->
+    # again horrible ,why I have to do that??
+    # I want to asign opComplex or opFrec here
+    op = {
+        greater : (\ a, b ->  Num.isGt ((Num.abs a.0) + (Num.abs a.1)) ((Num.abs b.0) + (Num.abs b.1))),
+        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.0001 ,atol : 0.00001  }) && (Num.isApproxEq  a.1 b.1 {rtol :0.0001 ,atol : 0.00001  })),
+        isZero : (\ a -> ( Num.isZero  a.0 ) && ( Num.isZero  a.1 )),
+        sub : Complex.sub,
+        mul : Complex.mul,
+        div : Complex.div,
+        neg : Complex.neg,
+        sum : Complex.add,
+        sumLst : (\ lst -> List.walk lst (0.0,0.0)
+            (\ state, elem->
+                (state.0 + elem.0, state.1 + elem.1)  ) ),
+        len : (\ lst ->
+            len =
+                List.map lst (\ a ->
+                    (Complex.mul a (Complex.conj a )).0
+                    |> Num.abs )
+                |> List.sum
+                |> Num.sqrt
+            (len, 0)
+            ),
+    }
+
+    if iter == 0 then
+        diagonal mat
+    else
+        when qrDecompositionC mat  is
+            Ok ( q, r) ->
+                when mulC r q  is
+                    Ok matPrim ->
+                        if isUppTriangMatrix matPrim op (0,0) then
+                            diagonal matPrim
+                        else
+                            findEigenValuesC matPrim (iter - 1)
+                    Err message -> Err message
+            Err message -> Err message
+
+powerMethodC : MatrixType (ComplexType a),List (ComplexType a), Nat -> Result (List (MatrixType (ComplexType a)))  Str
+powerMethodC = \ mat, eigVal, iter ->
+    op = {
+        greater : (\ a, b ->  Num.isGt ((Num.abs a.0) + (Num.abs a.1)) ((Num.abs b.0) + (Num.abs b.1))),
+        equal : (\ a, b -> (Num.isApproxEq  a.0 b.0 {rtol :0.0001 ,atol : 0.00001  }) && (Num.isApproxEq  a.1 b.1 {rtol :0.0001 ,atol : 0.00001  })),
+        isZero : (\ a -> ( Num.isZero  a.0 ) && ( Num.isZero  a.1 )),
+        sub : Complex.sub,
+        mul : Complex.mul,
+        div : Complex.div,
+        neg : Complex.neg,
+        sum : Complex.add,
+        sumLst : (\ lst -> List.walk lst (0.0,0.0)
+            (\ state, elem->
+                (state.0 + elem.0, state.1 + elem.1)  ) ),
+        len : (\ lst ->
+            len =
+                List.map lst (\ a ->
+                    (Complex.mul a (Complex.conj a )).0
+                    |> Num.abs )
+                |> List.sum
+                |> Num.sqrt
+            (len, 0)
+            ),
+    }
+    powerMethodInternal mat eigVal op iter (Num.toFrac 0, Num.toFrac 0) (Num.toFrac 1, Num.toFrac 0)
+
+powerMethodInternal : MatrixType a, List a, OperationType a, Nat, a, a -> Result (List (MatrixType a))  Str
+powerMethodInternal = \ mat, eigVal, op, iter, zero, one ->
+    iteration : MatrixType a, MatrixType a, OperationType a, Nat, a -> Result (MatrixType a) Str
+    iteration = \ matMod, curVec, inOp, curIter, lastLen ->
+        dbg curIter
+        if curIter == 0 then
+            Ok curVec
+        else
+            newVecResult = mulInternal matMod curVec inOp
+
+            when newVecResult is
+                Ok newVec ->
+                    when transpose newVec is
+                        [vec] ->
+                            den = inOp.len vec
+                            iterVec = scalarOp newVec den op.div
+                            iteration matMod iterVec inOp (curIter - 1) (inOp.len vec)
+                        _ -> Err "some unknown size error"
+                Err message -> Err message
+
+    size = getSize mat
+
+    List.walkTry eigVal [] (\ state, eig ->
+        unitEigen = scalarOp (unitInternal size.0 zero one ) eig op.mul
+
+        modifiedResult =
+            when elemWiseOp mat unitEigen op.sub is
+                Ok nomMat ->  inverseInternal nomMat zero one op
+                Err message -> Err message
+
+        when modifiedResult is
+            Ok modified ->
+                when iteration modified (transpose [List.repeat one size.0]) op iter (op.len (List.repeat one size.0)) is
+                    Ok eigVec ->
+                        Ok (List.append state (transpose eigVec))
+                    Err message -> Err message
+            Err message -> Err message
+        )
