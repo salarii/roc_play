@@ -3,19 +3,33 @@
 #include <chrono>
 #include <thread>
 
+
+
 #include "audio.h"
 #include "hackRF.h"
 
+
+std::shared_ptr<SampleBuffer> sampleBuffer;
+hackrf_device* device = nullptr;
+
+
 SampleBuffer::SampleBuffer(size_t batchSz) : batchSize(batchSz) {}
 
+std::shared_ptr<SampleBuffer> giveBuffer()
+{
+    return sampleBuffer;
+}
+
 void SampleBuffer::addChunk(float* chunk, size_t chunkSize) {
+    std::lock_guard<std::mutex> mutex(bufferMtx);
     for (size_t i = 0; i < chunkSize; ++i) {
         buffer.push_back(chunk[i]);
     }
-    delete[] chunk; // Properly delete the C-style array after copying the data
+    //delete[] chunk; // Properly delete the C-style array after copying the data
 }
 
 std::vector<float> SampleBuffer::getBatch() {
+    std::lock_guard<std::mutex> mutex(bufferMtx);
     std::vector<float> batch;
     if (buffer.size() < batchSize) {
         return batch; // Return empty if not enough data
@@ -29,64 +43,71 @@ std::vector<float> SampleBuffer::getBatch() {
 }
 
 bool SampleBuffer::hasBatch() const {
+    std::lock_guard<std::mutex> mutex(bufferMtx);
     return buffer.size() >= batchSize;
 }
 
-void SampleBuffer::processAndStoreBatch() {
+bool SampleBuffer::hasProcessed() const {
+    std::lock_guard<std::mutex> mutex(batchesMtx);
+    return !processedBatches.empty();
+}
+
+void SampleBuffer::processAndStoreBatch(std::function<std::vector<float>(std::vector<float>)> _callback) {
     while (hasBatch()) {
         std::vector<float> batch = getBatch();
-        processBatch(batch); // Process the batch
-
-        // Store the processed batch
-        processedBatches.push_back(batch);
+        auto processed = _callback(batch);
+        std::lock_guard<std::mutex> mutex(batchesMtx);
+        processedBatches.push_back(std::move(processed));
     }
 }
 
-void SampleBuffer::forwardOneProcessedBatch() {
+std::vector<float> SampleBuffer::getProcessedBatch() {
+    std::lock_guard<std::mutex> mutex(batchesMtx);
     if (!processedBatches.empty()) {
-        auto& batch = processedBatches.front();
-        forwardBatch(batch); // Forward the batch
-        processedBatches.pop_front(); // Remove the batch from the list after forwarding
+        auto batch = processedBatches.front();
+        processedBatches.pop_front();
+        return batch;
+    }
+    std::vector<float>();
+}
+
+void process(std::function<std::vector<float>(std::vector<float>)> _callback) {
+    if (sampleBuffer)
+    {
+        sampleBuffer->processAndStoreBatch(_callback);
     }
 }
 
-void processBatch(const std::vector<float>& batch) {
-    // Placeholder for actual processing logic
-    for (float sample : batch) {
-        std::cout << sample << " ";
+std::vector<float> getBatch()
+{
+    if (sampleBuffer)
+    {
+        return sampleBuffer->getProcessedBatch();
     }
-    std::cout << std::endl;
+    return std::vector<float>();
 }
-
-void forwardBatch(const std::vector<float>& batch) {
-    // Placeholder for forwarding logic
-    std::cout << "Forwarding batch: ";
-    for (float sample : batch) {
-        std::cout << sample << " ";
-    }
-    std::cout << std::endl;
-}
-
-
-
 
 // Callback function to handle received samples
 int rx_callback(hackrf_transfer* transfer) {
     // Here, we simply print the number of bytes received to demonstrate data handling
     // In a real application, you would process the IQ samples contained in transfer->buffer
 
-    for(int i = 100000; i < 100052; i += 2) { // Step by 2 to handle I and Q components
-        float I = (float)(transfer->buffer[i] - 128);
-        float Q = (float)(transfer->buffer[i+1] - 128);
+    if (sampleBuffer)
+    {
+        int numberOfSamples = transfer->valid_length;
+        float arr [numberOfSamples];
+        for (size_t i = 0; i < numberOfSamples; i++) {
+            arr[i] = transfer->buffer[i] - 128;
+        }
 
-        // Now I and Q are centered around 0 and can be used for further processing
-        std::cout << "I: " << I << ", Q: " << Q << std::endl;
+        sampleBuffer->addChunk(arr, numberOfSamples);
+        std::cout << "Received " << transfer->valid_length << " bytes" << std::endl;
     }
-    std::cout << "Received " << transfer->valid_length << " bytes" << std::endl;
     return HACKRF_SUCCESS;
 }
 
-int startHackRF()
+
+int startHackRF(float _freq, int _sampleRate)
 {
     int result = HACKRF_SUCCESS;
 
@@ -98,7 +119,7 @@ int startHackRF()
     }
 
     // Open the first HackRF device found
-    hackrf_device* device = nullptr;
+
     result = hackrf_open(&device);
     if (result != HACKRF_SUCCESS) {
         std::cerr << "Failed to open HackRF device: " << hackrf_error_name((hackrf_error)result) << std::endl;
@@ -107,13 +128,13 @@ int startHackRF()
     }
 
     // Set frequency
-    result = hackrf_set_freq(device, 40000000); // 915 MHz
+    result = hackrf_set_freq(device, _freq); // 915 MHz
     if (result != HACKRF_SUCCESS) {
         std::cerr << "Failed to set frequency: " << hackrf_error_name((hackrf_error)result) << std::endl;
     }
 
     // Set sample rate
-    result = hackrf_set_sample_rate(device, 20000000); // 10 MSPS
+    result = hackrf_set_sample_rate(device, _sampleRate); // 10 MSPS
     if (result != HACKRF_SUCCESS) {
         std::cerr << "Failed to set sample rate: " << hackrf_error_name((hackrf_error)result) << std::endl;
     }
@@ -144,11 +165,13 @@ int startHackRF()
         hackrf_exit();
         return EXIT_FAILURE;
     }
+    //sampleBuffer.reset(new SampleBuffer(_sampleRate));
+    sampleBuffer.reset(new SampleBuffer(44100));
 
-    // Receive for a short period (e.g., 5 seconds) then exit for this example
-    std::cout << "Receiving for 5 seconds..." << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+}
 
+void stopHackRF()
+{
     // Stop the RX mode
     hackrf_stop_rx(device);
 
@@ -156,7 +179,8 @@ int startHackRF()
     hackrf_close(device);
     hackrf_exit();
 
-    std::cout << "Done." << std::endl;
+    std::cout << "stopped." << std::endl;
+
+    sampleBuffer.reset();
 
 }
-

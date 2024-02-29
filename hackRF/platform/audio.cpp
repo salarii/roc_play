@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <math.h>
+#include <cassert>
 #include <portaudio.h>
+
+#include "hackRF.h"
 
 #define SAMPLE_RATE 44100
 #define FREQUENCY 12000
 #define DURATION 5
 
-typedef struct {
-    double phase;
-    double phase_increment;
-} paTestData;
+
 
 static int patestCallback(const void *inputBuffer, void *outputBuffer,
                           unsigned long framesPerBuffer,
@@ -17,31 +17,64 @@ static int patestCallback(const void *inputBuffer, void *outputBuffer,
                           PaStreamCallbackFlags statusFlags,
                           void *userData) {
     /* Cast data passed through stream to our structure. */
-    paTestData *data = (paTestData*)userData;
+
     float *out = (float*)outputBuffer;
-    unsigned long i;
+
 
     (void) timeInfo; // Prevent unused variable warnings.
     (void) statusFlags;
     (void) inputBuffer;
+    auto buffer = giveBuffer();
+    if (buffer)
+    {
+        if (buffer->hasProcessed())
+        {
+            float div =  256.0;
+            auto buff = buffer->getProcessedBatch();
+            assert(framesPerBuffer == buff.size());
+            for (size_t i = 0; i < buff.size(); ++i) {
+                *out++ = buff[i]/div;
+                *out++ = buff[i]/div;
+            }
+            return 0;
+        }
+    }
 
-    for (i = 0; i < framesPerBuffer; i++) {
-        *out++ = sin(data->phase);  // Left channel
-        *out++ = sin(data->phase);  // Right channel
-        data->phase += data->phase_increment;
-        if (data->phase >= 2.0 * M_PI) data->phase -= 2.0 * M_PI;
+    for (unsigned i = 0; i < framesPerBuffer; i++) {
+        *out++ = 0;  // Left channel
+        *out++ = 0;  // Right channel
     }
 
     return 0;
 }
+PaStream *stream;
+int stopAudioInternal(void) {
+    /* Play for several seconds. */
+    PaError err;
+    err = Pa_StopStream(stream);
+    if (err != paNoError) goto error;
+
+    err = Pa_CloseStream(stream);
+    if (err != paNoError) goto error;
+
+    Pa_Terminate();
+    printf("Test finished.\n");
+
+    if (err != paNoError) goto error;
+
+    return err;
+
+error:
+    Pa_Terminate();
+    fprintf(stderr, "An error occured while using the portaudio stream\n");
+    fprintf(stderr, "Error number: %d\n", err);
+    fprintf(stderr, "Error message: %s\n", Pa_GetErrorText(err));
+    return err;
+}
 
 int runAudioInternal(void) {
-    PaStream *stream;
-    PaError err;
-    paTestData data;
 
-    data.phase = 0;
-    data.phase_increment = 2.0 * M_PI * FREQUENCY / SAMPLE_RATE;
+    PaError err;
 
     err = Pa_Initialize();
     if (err != paNoError) goto error;
@@ -51,25 +84,15 @@ int runAudioInternal(void) {
                                2,          /* stereo output */
                                paFloat32,  /* 32 bit floating point output */
                                SAMPLE_RATE,
-                               256,        /* frames per buffer */
+                               SAMPLE_RATE,        /* frames per buffer */
                                patestCallback,
-                               &data);
+                               nullptr);
     if (err != paNoError) goto error;
 
     err = Pa_StartStream(stream);
     if (err != paNoError) goto error;
 
-    /* Play for several seconds. */
-    Pa_Sleep(DURATION * 1000);
 
-    err = Pa_StopStream(stream);
-    if (err != paNoError) goto error;
-
-    err = Pa_CloseStream(stream);
-    if (err != paNoError) goto error;
-
-    Pa_Terminate();
-    printf("Test finished.\n");
 
     return err;
 
@@ -82,9 +105,9 @@ error:
 }
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+// #ifdef __cplusplus
+// extern "C" {
+// #endif
 
 int runAudio(void)
 {
@@ -92,6 +115,6 @@ int runAudio(void)
 
 }
 
-#ifdef __cplusplus
-}
-#endif
+// #ifdef __cplusplus
+// }
+// #endif

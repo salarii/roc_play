@@ -6,7 +6,10 @@
 #include <string>
 #include <optional>
 #include <cctype>
+#include <sstream>
+
 #include "hackRF.h"
+#include "audio.h"
 
 std::mutex mtx;
 std::condition_variable cv;
@@ -60,15 +63,17 @@ std::optional<float> stringToFloat(const std::string& str) {
 void inputThread() {
     std::string input;
     while (true) {
-        std::cout << "type exit, or frequency you want to operate format as  eg. 10000, 213.44344  or  1.3e3" << std::endl;
+        std::cout << "type exit, or frequency and sample rate you want to operate, format as  eg. 10000, 213.44344  or  1.3e3" << std::endl;
         std::getline(std::cin, input);
-        if (input == "exit") break;
+
 
         {
             std::lock_guard<std::mutex> lk(mtx);
             dataQueue.push(input);
         }
         cv.notify_one();
+
+        if (input == "exit") break;
     }
 }
 
@@ -87,17 +92,22 @@ void processingThread() {
             std::lock_guard<std::mutex> processedLk(processedMtx);
             processedQueue.push(data);
         }
-        processedCv.notify_one();
         if (data == "exit")
         {
              break;
         }
         else
         {
-            auto freq = stringToFloat(data);
-            if (freq )
+            std::istringstream stream(data);
+
+            std::string freqS, sampleS;
+            stream >> freqS >> sampleS;
+            auto freq = stringToFloat(freqS);
+            auto sample = stringToFloat(sampleS);
+            if (freq &&  sample)
             {
-                if ( startHackRF() == EXIT_FAILURE )
+                stopHackRF();
+                if ( startHackRF(*freq, *sample) == EXIT_FAILURE )
                 {
                     std::cout << "hack rf failed to start" << std::endl;
                     continue;
@@ -106,7 +116,7 @@ void processingThread() {
             }
             else
             {
-                std::cout << "input is not a number" << std::endl;
+                std::cout << "input should be in format \"freq  sample_rate\"  both numbers" << std::endl;
             }
         }
     }
@@ -116,19 +126,29 @@ void processingThread() {
 void workThread() {
     std::string processedData;
     while (true) {
-        std::unique_lock<std::mutex> processedLk(processedMtx);
-        processedCv.wait(processedLk, []{ return !processedQueue.empty(); });
+        {
+            std::unique_lock<std::mutex> processedLk(processedMtx);
+            if ( processedQueue.empty() == false )
+            {
+                processedData = processedQueue.front();
+                processedQueue.pop();
 
-        processedData = processedQueue.front();
-        processedQueue.pop();
+                if (processedData == "exit") break;
+            }
+        }
+        auto  callback =
+            [](const std::vector<float>& vec) -> std::vector<float> {
+                return vec; // Return the sum of the vector's elements
+            };
 
-        if (processedData == "Processed: exit") break;
+        process(callback);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-        std::cout << processedData << std::endl;
     }
 }
 
 int main() {
+    runAudio();
     std::thread input(inputThread);
     std::thread processing(processingThread);
     std::thread work(workThread);
@@ -137,6 +157,6 @@ int main() {
     input.join();
     processing.join();
     work.join();
-
+    stopHackRF();
     return 0;
 }

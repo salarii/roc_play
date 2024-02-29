@@ -27,40 +27,6 @@ void *roc_memset(void *str, int c, size_t n)
 }
 
 
-
-
-
-// struct RocStr { char *bytes; size_t len; size_t capacity; };
-// const size_t SLICE_BIT = ((size_t)1) << (8 * sizeof(size_t) - 1);
-// const size_t REFCOUNT_MAX = 0;
-// int main()
-// {
-//     struct RocStr str1;
-
-//     // int  res =  runAudio();
-//     // if (res)
-//     // {
-//     //     printf("audio  problem  %d\n", res);
-
-//     // }
-//     char *zink  = (char*)malloc(10);
-//     size_t rc = REFCOUNT_MAX;
-//     size_t slice_bits = (((size_t)&rc) >> 1) | SLICE_BIT;
-
-
-//     struct RocStr  str2 = { zink, 10, slice_bits };
-//     float input[300];
-//     roc__mainForHost_1_exposed_generic(&str1, &str2);
-
-//     for (int i=0; i<str1.len && i<3000; ++i)
-//        putchar(str1.bytes[i]);
-
-
-//     printf("sfsdfsfds\n");
-// }
-
-
-
 struct RocStr { char *bytes; size_t len; size_t capacity; };
 struct RocList { float *data; size_t len; size_t capacity; };
 const size_t SLICE_BIT = ((size_t)1) << (8 * sizeof(size_t) - 1);
@@ -80,7 +46,7 @@ float inputs[100];
     size_t slice_bits = (((size_t)&rc) >> 1) | SLICE_BIT;
     in.capacity = slice_bits;
 
-    roc__mainForHost_1_exposed_generic(&out, &in);
+    roc__mainForHost_1_exposed_generic(&out, &in, &in);
     const char *bytes;
     size_t len;
 	if (((ptrdiff_t)out.capacity) < 0) {
