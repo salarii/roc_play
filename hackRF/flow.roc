@@ -9,6 +9,12 @@ app "hello"
     provides [main] to pf
 
 
+# Performance isn't up to snuff here.
+# C++ implementation barely makes it, and there's not much room to play.
+# Trying to make this better might not do much. Starts to make you question if this language is up for the heavy stuff.
+# I tried to play with the function in other place, it can be done faster but still 100s times slower than C++.
+# So, it looks like Roc might not be the best fit for this job as things stand.
+# maybe I will use it for scripting
 differentialInternal : List (Frac a), List (Frac a), List (Frac a), List (Frac a) -> Result (List (Frac a)) Str
 differentialInternal  = \ y, u, yParam, uParam ->
     if List.len y < List.len yParam then
@@ -25,6 +31,8 @@ differentialInternal  = \ y, u, yParam, uParam ->
         updatedY = uPart - yPart
         differentialInternal (List.prepend y updatedY) (List.dropFirst u 1) yParam uParam
 
+
+
 toPrint : List (Num a), List (Num a)  -> Str
 toPrint = \ x, y ->
     List.map2 x y  (\ xVal, yVal ->
@@ -37,7 +45,7 @@ uPar = [0.000040885f32, 0.000408853f32, 0.001839838f32, 0.004906235f32, 0.008585
 
 
 main =
-    sampSec = 1024f32
+    sampSec = 1000000f32
     freq1 = 2f32
     freq2 = 120f32
 
@@ -54,11 +62,10 @@ main =
     firstNotNeeded = List.dropFirst yPar 1
     y = List.repeat 0 (List.len firstNotNeeded)
 
-
     when differentialInternal y u firstNotNeeded uPar is
         Ok lstRev ->
             lst = List.reverse lstRev
             outFilename = Path.fromStr "data.txt"
-            _ <- File.writeUtf8 outFilename (toPrint xAxis lst) |> Task.attempt
+            #_ <- File.writeUtf8 outFilename (toPrint xAxis lst) |> Task.attempt
             Stdout.line "processing  ok!"
         Err str  -> Stdout.line str
