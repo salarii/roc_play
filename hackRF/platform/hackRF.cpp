@@ -20,17 +20,15 @@ std::shared_ptr<SampleBuffer> giveBuffer()
     return sampleBuffer;
 }
 
-void SampleBuffer::addChunk(float* chunk, size_t chunkSize) {
+void SampleBuffer::addChunk(uint8_t* chunk, size_t chunkSize) {
     std::lock_guard<std::mutex> mutex(bufferMtx);
-    for (size_t i = 0; i < chunkSize; ++i) {
-        buffer.push_back(chunk[i]);
-    }
-    //delete[] chunk; // Properly delete the C-style array after copying the data
+    // Efficiently add all elements at once
+    buffer.insert(buffer.end(), chunk, chunk + chunkSize);
 }
 
-std::vector<float> SampleBuffer::getBatch() {
+std::vector<uint8_t> SampleBuffer::getBatch() {
     std::lock_guard<std::mutex> mutex(bufferMtx);
-    std::vector<float> batch;
+    std::vector<uint8_t> batch;
     if (buffer.size() < batchSize) {
         return batch; // Return empty if not enough data
     }
@@ -52,9 +50,9 @@ bool SampleBuffer::hasProcessed() const {
     return !processedBatches.empty();
 }
 
-void SampleBuffer::processAndStoreBatch(std::function<std::vector<float>(std::vector<float>)> _callback) {
+void SampleBuffer::processAndStoreBatch(std::function<std::vector<float>(std::vector<uint8_t>const &)> _callback) {
     while (hasBatch()) {
-        std::vector<float> batch = getBatch();
+        std::vector<uint8_t> batch = getBatch();
         auto processed = _callback(batch);
         std::lock_guard<std::mutex> mutex(batchesMtx);
         processedBatches.push_back(std::move(processed));
@@ -68,10 +66,10 @@ std::vector<float> SampleBuffer::getProcessedBatch() {
         processedBatches.pop_front();
         return batch;
     }
-    std::vector<float>();
+    return std::vector<float>();
 }
 
-void process(std::function<std::vector<float>(std::vector<float>)> _callback) {
+void process(std::function<std::vector<float>(std::vector<uint8_t> const &)> _callback) {
     if (sampleBuffer)
     {
         sampleBuffer->processAndStoreBatch(_callback);
@@ -89,25 +87,17 @@ std::vector<float> getBatch()
 
 // Callback function to handle received samples
 int rx_callback(hackrf_transfer* transfer) {
-    // Here, we simply print the number of bytes received to demonstrate data handling
-    // In a real application, you would process the IQ samples contained in transfer->buffer
 
-    if (sampleBuffer)
-    {
-        int numberOfSamples = transfer->valid_length;
-        float arr [numberOfSamples];
-        for (size_t i = 0; i < numberOfSamples; i++) {
-            arr[i] = transfer->buffer[i] - 128;
-        }
-
-        sampleBuffer->addChunk(arr, numberOfSamples);
-        std::cout << "Received " << transfer->valid_length << " bytes" << std::endl;
+    if (sampleBuffer && transfer->buffer) {
+        // Directly pass the pointer and length to addChunk without copying to a temporary array
+        sampleBuffer->addChunk(transfer->buffer, transfer->valid_length);
+       // std::cout << "Received " << transfer->valid_length << " bytes" << std::endl;
     }
     return HACKRF_SUCCESS;
 }
 
 
-int startHackRF(float _freq, int _sampleRate)
+int initHackRF()
 {
     int result = HACKRF_SUCCESS;
 
@@ -117,7 +107,12 @@ int startHackRF(float _freq, int _sampleRate)
         std::cerr << "Failed to initialize HackRF: " << hackrf_error_name((hackrf_error)result) << std::endl;
         return EXIT_FAILURE;
     }
-
+    return result;
+}
+int startHackRF(float _freq, int _sampleRate)
+{
+    int result = HACKRF_SUCCESS;
+    initHackRF();
     // Open the first HackRF device found
 
     result = hackrf_open(&device);
@@ -146,7 +141,7 @@ int startHackRF(float _freq, int _sampleRate)
     }
 
     // Set VGA gain
-    result = hackrf_set_vga_gain(device, 50);
+    result = hackrf_set_vga_gain(device, 45);
     if (result != HACKRF_SUCCESS) {
         std::cerr << "Failed to set VGA gain: " << hackrf_error_name((hackrf_error)result) << std::endl;
     }
@@ -165,14 +160,15 @@ int startHackRF(float _freq, int _sampleRate)
         hackrf_exit();
         return EXIT_FAILURE;
     }
-    //sampleBuffer.reset(new SampleBuffer(_sampleRate));
-    sampleBuffer.reset(new SampleBuffer(44100));
 
+    sampleBuffer.reset(new SampleBuffer(_sampleRate*2));
+    return  result;
 }
 
 void stopHackRF()
 {
-    // Stop the RX mode
+    if (device == nullptr)
+        return;
     hackrf_stop_rx(device);
 
     // Close the device and clean up the library

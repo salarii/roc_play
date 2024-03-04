@@ -1,22 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
 project(MyRocProject)
 include_directories(/usr/include/libhackrf/)
-if(0)
+if(1)
 
     cmake_minimum_required(VERSION 2.6)
     set(CMAKE_VERBOSE_MAKEFILE ON)
     Project(connectApp)
 
-    SET(GCC_COMPILE_FLAGS " -O0 -g  ")
-
+    #SET(GCC_COMPILE_FLAGS " -O0 -g  ")
+    SET(GCC_COMPILE_FLAGS " -O3  ")
 
     SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COMPILE_FLAGS}")
     SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ")
 
-    #add_executable(testApp main.cpp audio.cpp)
-    #add_executable(testApp plot.cpp)
 
-    add_executable(app  platform/platform.cpp  platform/hackRF.cpp platform/audio.cpp)
+    add_executable(app  platform/platform.cpp  platform/hackRF.cpp platform/audio.cpp platform/flow.cpp)
     target_link_libraries(app PRIVATE  portaudio pthread hackrf stdc++ GL GLEW glfw )
     target_compile_features(app PRIVATE cxx_std_17)
 
@@ -32,7 +30,7 @@ else()
     set(CMAKE_CXX_STANDARD 17)
     set(CMAKE_VERBOSE_MAKEFILE ON)
     # Compile the C source file into an object file
-    add_library(hackrf_platform OBJECT platform/host.c )
+    add_library(hackrf_platform OBJECT platform/host.c platform/flow.cpp)
 
     # Add a custom command to run the external roc application
     # Assuming this generates 'app.o' in the current binary directory

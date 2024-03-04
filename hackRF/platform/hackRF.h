@@ -14,8 +14,9 @@
 
 int startHackRF(float _freq, int _sampleRate);
 void stopHackRF();
+int initHackRF();
 
-void process(std::function<std::vector<float>(std::vector<float>)> _callback);
+void process(std::function<std::vector<float>(std::vector<uint8_t> const &)> _callback);
 std::vector<float> getBatch();
 
     // processData(myData, [](const std::vector<float>& vec) -> float {
@@ -28,7 +29,7 @@ std::vector<float> getBatch();
 
 class SampleBuffer {
 private:
-    std::deque<float> buffer; // Using deque for efficient front removal
+    std::deque<uint8_t> buffer; // Using deque for efficient front removal
     std::list<std::vector<float>> processedBatches; // Store processed batches
     size_t batchSize; // Size of the batch to process
     mutable std::mutex bufferMtx;
@@ -36,10 +37,10 @@ private:
 public:
     SampleBuffer(size_t batchSz);
     bool hasProcessed() const;
-    void addChunk(float* chunk, size_t chunkSize);
-    std::vector<float> getBatch();
+    void addChunk(uint8_t* chunk, size_t chunkSize);
+    std::vector<uint8_t> getBatch();
     bool hasBatch() const;
-    void processAndStoreBatch(std::function<std::vector<float>(std::vector<float>)> _callback);
+    void processAndStoreBatch(std::function<std::vector<float>(std::vector<uint8_t>const &)> _callback);
     std::vector<float> getProcessedBatch();
 
 };

@@ -7,7 +7,9 @@
 #include <optional>
 #include <cctype>
 #include <sstream>
+#include <cassert>
 
+#include "flow.h"
 #include "hackRF.h"
 #include "audio.h"
 
@@ -104,10 +106,11 @@ void processingThread() {
             stream >> freqS >> sampleS;
             auto freq = stringToFloat(freqS);
             auto sample = stringToFloat(sampleS);
-            if (freq &&  sample)
+            if (freq && sample)
             {
                 stopHackRF();
-                if ( startHackRF(*freq, *sample) == EXIT_FAILURE )
+                // ignore sample for now startHackRF(*freq, *sample)
+                if ( startHackRF(*freq, 8820000) == EXIT_FAILURE )
                 {
                     std::cout << "hack rf failed to start" << std::endl;
                     continue;
@@ -137,8 +140,9 @@ void workThread() {
             }
         }
         auto  callback =
-            [](const std::vector<float>& vec) -> std::vector<float> {
-                return vec; // Return the sum of the vector's elements
+            [](const std::vector<uint8_t>& vec) -> std::vector<float> {
+                assert(!vec.empty());
+                return processAudioSignal(vec); // Return the sum of the vector's elements
             };
 
         process(callback);
@@ -148,6 +152,11 @@ void workThread() {
 }
 
 int main() {
+    if (initHackRF() == EXIT_FAILURE)
+    {
+        std::cout  <<"can't initialise hackRF library\n";
+    }
+
     runAudio();
     std::thread input(inputThread);
     std::thread processing(processingThread);

@@ -5,20 +5,25 @@
 #include <functional>
 
 std::vector<float> filterSignal(const std::vector<float>& u,
-                                const std::vector<float>& yPar,
-                                const std::vector<float>& uPar) {
+                                  const std::vector<float>& yPar,
+                                  const std::vector<float>& uPar) {
     size_t inputLength = u.size();
-    std::vector<float> y(inputLength, 0.0f); // Initialize output buffer
+    std::vector<float> y(inputLength, 0.0); // Initialize output buffer
 
-    // Assuming yPar[0] is 1.0f and is not used in the computation
+    // Loop through each sample in the input
     for (size_t n = 0; n < inputLength; ++n) {
-        float yn = 0.0f;
+        float yn = 0.0;
+
+        // Feedforward part
         for (size_t j = 0; j < uPar.size(); ++j) {
-            yn += (n >= j) ? uPar[j] * u[n - j] : 0.0f;
+            yn += (n >= j) ? uPar[j] * u[n - j] : 0.0;
         }
+
+        // Feedback part (excluding yPar[0] as it is assumed to be 1)
         for (size_t i = 1; i < yPar.size(); ++i) {
-            yn -= (n >= i) ? yPar[i] * y[n - i] : 0.0f;
+            yn -= (n >= i) ? yPar[i] * y[n - i] : 0.0;
         }
+
         y[n] = yn;
     }
 
@@ -100,9 +105,9 @@ std::vector<float> processSignal(const std::vector<float>& originalSignal,
 }
 
 
-void processIQ(const std::vector<int>& interleavedIQ, std::vector<float>& I, std::vector<float>& Q) {
+void processIQ(const std::vector<uint8_t>& interleavedIQ, std::vector<float>& I, std::vector<float>& Q) {
     // Assuming the input is 8-bit values in the range [0, 255]
-    const int centeringValue = 128; // Value to subtract to center around 0
+    const uint8_t centeringValue = 128; // Value to subtract to center around 0
 
     size_t numSamples = interleavedIQ.size() / 2;
     I.resize(numSamples);
@@ -115,13 +120,13 @@ void processIQ(const std::vector<int>& interleavedIQ, std::vector<float>& I, std
     }
 }
 
-std::vector<int> fmModulateIQInterleavedScaled(int numSamples, std::function<double(int)> modFunction, double maxPhaseShiftFrequency) {
-    std::vector<int> iqSignal(numSamples * 2); // Initialize I/Q signal vector with double the number of samples
-    double phase = 0.0; // Initial phase
+std::vector<int> fmModulateIQInterleavedScaled(int numSamples, std::function<float(int)> modFunction, float maxPhaseShiftFrequency) {
+    std::vector<int> iqSignal(numSamples * 2); // Initialize I/Q signal vector with float the number of samples
+    float phase = 0.0; // Initial phase
 
     for (int i = 0; i < numSamples; ++i) {
         // Calculate phase shift for current sample
-        double phaseShift = maxPhaseShiftFrequency * modFunction(i);
+        float phaseShift = maxPhaseShiftFrequency * modFunction(i);
         // Update total phase
         phase += phaseShift;
 
@@ -133,13 +138,13 @@ std::vector<int> fmModulateIQInterleavedScaled(int numSamples, std::function<dou
     return iqSignal;
 }
 
-auto generateModFunction(int numSamples, double frequency) {
-    // Capture the total number of samples and desired frequency
-    return [numSamples, frequency](int sampleIndex) -> double {
+auto generateModFunction(int numSamples, float frequency1, float frequency2) {
+    // Capture the total number of samples and both frequencies
+    return [numSamples, frequency1, frequency2](int sampleIndex) -> float {
         // Calculate the time for the current sample
-        double time = static_cast<double>(sampleIndex) / numSamples;
-        // Return the sine of the current sample based on the desired frequency
-        return std::sin(2 * M_PI * frequency * time);
+        float time = static_cast<float>(sampleIndex) / numSamples;
+        // Return the sine of the current sample based on the two frequencies
+        return std::sin(2 * M_PI * frequency1 * time) + std::sin(2 * M_PI * frequency2 * time);
     };
 }
 
@@ -168,49 +173,73 @@ void writeVectorToOctaveFileWithAngle(const std::vector<float>& vec, const std::
 
     std::cout << "Data successfully written to " << filePath << std::endl;
 }
+
+std::vector<float> processAudioSignal(const std::vector<uint8_t>& inputSignal) {
+
+    std::vector<float> I, Q;
+    processIQ(inputSignal, I, Q);
+
+    // Define filter parameters (example given, replace with actual function calls or processes)
+    std::vector<float> preFilterYPar = {1.00000f, -3.89787f, 5.71840f, -3.74190f, 0.92144f};
+    std::vector<float> preFilterUPar = {0.0011148f, -0.0038066f, 0.0054380f, -0.0038066f, 0.0011148f};
+    unsigned preDecimationFactor = 10;
+
+    std::vector<float> filterYPar = {1.00000f, -2.43144f, 3.56108f, -3.13820f, 1.71804f, -0.48897f};
+    std::vector<float> filterUPar = {0.016428f, 0.036650f, 0.057172f, 0.057172f, 0.036650f, 0.016428f};
+    unsigned decimationFactor = 2;
+
+    // Process signals
+    std::vector<float> Iprocessed = processSignal(I, preFilterYPar, preFilterUPar, preDecimationFactor, filterYPar, filterUPar, decimationFactor);
+    std::vector<float> Qprocessed = processSignal(Q, preFilterYPar, preFilterUPar, preDecimationFactor, filterYPar, filterUPar, decimationFactor);
+
+    // FM demodulate (assuming fmDemodulate is defined)
+    std::vector<float> demodulated = fmDemodulate(Iprocessed, Qprocessed);
+
+    // Final filter parameters
+    std::vector<float> yPar = {1.00000f, -5.22957f, 11.43904f, -13.39218f, 8.84839f, -3.12759f, 0.46195f};
+    std::vector<float> uPar = {0.00000068233f, 0.00000409396f, 0.00001023489f, 0.00001364653f, 0.00001023489f, 0.00000409396f, 0.00000068233f};
+
+    // Apply final filter
+    std::vector<float> readyForAudioSignal = filterSignal(demodulated, yPar, uPar);
+
+    // Decimate (assuming decimate is defined)
+    unsigned audioDec = 10;
+    std::vector<float> audio = decimate(readyForAudioSignal, audioDec);
+
+    // Return processed audio signal
+    auto size =  audio.size();
+    for (float& value : audio) {
+        value *= 20; // Alter each element, e.g., multiply by 2
+    }
+    return audio;
+}
+
+/*
 int main() {
 
     // Number of samples, modulation function, and max phase shift frequency
     int numSamples = 8820000;
-
-    double maxPhaseShift =2*M_PI*75000/(double)numSamples;
-    float  desiredFrequency = 5000;
-    auto modFunction = generateModFunction(numSamples, desiredFrequency);
+    //int numSamples = 220e3;
+    float maxPhaseShift =2*M_PI*75000/(float)numSamples;
+    float  desiredFrequency1 = 1000000;
+    float  desiredFrequency2 = 60000;
+    auto modFunction = generateModFunction(numSamples, desiredFrequency1,desiredFrequency2);
 
     // Perform FM modulation and scaling
     std::vector<int> interleavedIQ = fmModulateIQInterleavedScaled(numSamples, modFunction, maxPhaseShift);
 
-
-    //initial signal sampling rate 8820000
-    // Example usage
-
     std::vector<float> I, Q;
 
     processIQ(interleavedIQ, I, Q);
-    std::vector<float> preFilterYPar = {1.0f, -7.99230f, 28.91219f, -62.31535f, 88.58766f, -86.76707f, 59.28095f, -27.89030f, 8.64568f, -1.59424f, 0.13277f};
-    std::vector<float> preFilterUPar = {0.0000000036197f, 0.0000000361970f, 0.0000001628863f, 0.0000004343634f, 0.0000007601360f, 0.0000009121632f, 0.0000007601360f, 0.0000004343634f, 0.0000001628863f, 0.0000000361970f, 0.0000000036197f};
+
+    std::vector<float> preFilterYPar = {1.00000f, -3.89787f, 5.71840f, -3.74190f, 0.92144f};
+    std::vector<float> preFilterUPar = {0.0011148f, -0.0038066f, 0.0054380f, -0.0038066f, 0.0011148f};
 
     unsigned preDecimationFactor = 10;
 
-    std::vector<float> filterYPar = {1.0f, -4.576198780309f, 12.378921753412f, -23.444731893213f,
-                               34.268542340966f, -40.241502658082f, 39.033367564208f,
-                               -31.746715867789f, 21.869263978165f, -12.822863985243f,
-                               6.411647305961f, -2.730066552846f, 0.985693433036f,
-                               -0.299456599484f, 0.075661517526f, -0.015628008993f,
-                               0.002573311272f, -0.000325120899f, 0.000029616833f,
-                               -0.000001732641f, 0.000000048912f};
-
-    std::vector<float> filterUPar = {0.00000014134f, 0.00000282688f, 0.00002685531f, 0.00016113188f,
-                               0.00068481050f, 0.00219139360f, 0.00547848400f, 0.01095696800f,
-                               0.01780507300f, 0.02374009734f, 0.02611410707f, 0.02374009734f,
-                               0.01780507300f, 0.01095696800f, 0.00547848400f, 0.00219139360f,
-                               0.00068481050f, 0.00016113188f, 0.00002685531f, 0.00000282688f,
-                               0.00000014134f};
-
-
-
-    unsigned decimationFactor = 4;
-
+    std::vector<float> filterYPar = {1.00000f, -2.43144f, 3.56108f, -3.13820f, 1.71804f, -0.48897f};
+    std::vector<float> filterUPar = {0.016428f, 0.036650f, 0.057172f, 0.057172f, 0.036650f, 0.016428f};
+    unsigned decimationFactor = 2;
     std::vector<float> Iprocessed = processSignal(
         I,
         preFilterYPar,
@@ -231,25 +260,18 @@ int main() {
 
     std::vector<float> demodulated = fmDemodulate(Iprocessed, Qprocessed);
 
-    std::vector<float> yPar = {1.0f, -13.8268062f, 91.5231183f, -385.4454328f, 1157.8504604f,
-                               -2636.1226478f, 4718.3436558f, -6796.6638327f, 8000.1939902f,
-                               -7768.8810671f, 6256.6168696f, -4185.1725290f, 2320.7844565f,
-                               -1060.8570535f, 395.7714269f, -118.6303476f, 27.8963253f,
-                               -4.9591693f, 0.6269049f, -0.0502414f, 0.0019196f};
+    std::vector<float> yPar = {1.00000f, -5.22957f, 11.43904f, -13.39218f, 8.84839f, -3.12759f, 0.46195f};
+    std::vector<float> uPar = {0.00000068233f, 0.00000409396f, 0.00001023489f, 0.00001364653f, 0.00001023489f, 0.00000409396f, 0.00000068233f};
 
-    std::vector<float> uPar = {3.1450e-14f, 6.2900e-13f, 5.9755e-12f, 3.5853e-11f, 1.5238e-10f,
-                               4.8760e-10f, 1.2190e-09f, 2.4380e-09f, 3.9618e-09f, 5.2824e-09f,
-                               5.8106e-09f, 5.2824e-09f, 3.9618e-09f, 2.4380e-09f, 1.2190e-09f,
-                               4.8760e-10f, 1.5238e-10f, 3.5853e-11f, 5.9755e-12f, 6.2900e-13f,
-                               3.1450e-14f};
 
     std::vector<float> readyForAudioSignal = filterSignal(demodulated, yPar, uPar);
 
-    unsigned audioDec = 5;
+    unsigned audioDec = 10;
     // Step 2: Pre-decimation
     std::vector<float> audio = decimate(readyForAudioSignal, audioDec);
-
+    writeVectorToOctaveFileWithAngle(audio, "data.txt");
     std::cout << audio.size() <<"\n";
     // Example input signal (populate with you
     return 0;
 }
+*/
